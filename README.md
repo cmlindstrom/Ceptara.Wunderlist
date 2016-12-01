@@ -27,8 +27,10 @@ Make a call
         Dim myToken As New Wunderlist.Client.oAuthAccessToken()
         myToken.RestoreFromStorageString(My.Settings.WunderlistStoredToken) 
 
+        strTrace = "Create a new Client"
         myW = New Wunderlist.Client(myConfig, myToken)
         
+        strtTrace = "Make a synchronous call."
         Dim myLists As List(Of Wunderlist.List) = myW.GetLists() ' Can also use Async calls, i.e. myW.GetListsAsync()
         If IsNothing(myLists) Then
             strTrace = "A null collection returned."
