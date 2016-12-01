@@ -1,0 +1,387 @@
+﻿<?xml version="1.0"?>
+<doc>
+<assembly>
+<name>
+Ceptara.Wunderlist
+</name>
+</assembly>
+<members>
+<member name="F:Ceptara.Wunderlist.Client._appKeys">
+	<summary>
+ Container for accessing the keys issued by the Wunderlist Developer
+ web client
+ </summary>
+	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.AccessToken">
+	<summary>
+ The oAuthAccessToken including the accessToken string and the
+ issued and expiration dates.
+ </summary>
+	<value>Wunderlist.Client.oAuthAccessToken:</value>
+	<returns>Wunderlist.Client.oAuthAccessToken:</returns>
+	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.AccessTokenStored">
+	<summary>
+ The accessToken returned by the service.
+ </summary>
+	<value>String:</value>
+	<returns>String:</returns>
+	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.AuthCode">
+	<summary>
+ the oAuth code used to retrieve the access token.
+ </summary>
+	<value></value>
+	<returns>String:</returns>
+	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.RestInterface">
+	<summary>
+ REST Helper class - used for authorizing a user.
+ </summary>
+	<value></value>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.#ctor">
+	<summary>
+ Constructs a basic Client
+ </summary>
+	<remarks>Need to set the AccessToken property to connect to
+ the Wunderlist service.</remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.#ctor(Ceptara.Wunderlist.AppConfig)">
+	<summary>
+ Constructs a client using the specific configuration
+ </summary>
+	<param name="myAppConfig"></param>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.#ctor(System.String)">
+	<summary>
+ Constructs a client using a Json string representing 
+ a Client.oAuthAccessToken object instance
+ </summary>
+	<param name="JsonFormattedAccessTokenString">String: Json formatted</param>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.#ctor(Ceptara.Wunderlist.Client.oAuthAccessToken)">
+	<summary>
+ Constructs a client using an oAuthAccessToken
+ </summary>
+	<param name="CurrentAccessToken">Client.oAuthAccessToken:</param>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.#ctor(Ceptara.Wunderlist.AppConfig,Ceptara.Wunderlist.Client.oAuthAccessToken)">
+	<summary>
+ Constructs a client using a specified application configuration (ClientID, ClientSecret, CallBackURL)
+ and oAuthAccessToken (if new use blank, other used saved AccessToken)
+ </summary>
+	<param name="myAppConfig">Wunderlist.AppConfig:</param>
+	<param name="CurrentAccessToken">Client.oAuthAccessToken:</param>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.Connect">
+	<summary>
+ Establishes a connection to the service using the 
+ calling user's credentials.
+ </summary>
+	<returns></returns>
+	<remarks>Stores an access token to be used in subsequent calls.</remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.IsTokenValid">
+	<summary>
+ Returns True if the current saved token is still valid.,
+ </summary>
+	<returns>Boolean:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetMyUser">
+	<summary>
+ Retrieve the currently logged in user's profile information
+ </summary>
+	<returns>Wunderlist.User:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetLists">
+	<summary>
+ Returns a collection of lists from the service.
+ </summary>
+	<returns>List(of Wunderlist.List):</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetList(System.String)">
+	<summary>
+ Returns the specified list.
+ </summary>
+	<param name="listId">String: List identifier</param>
+	<returns>Wunderlist.List:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.CreateList(System.String)">
+	<summary>
+ Creates a new list on the service.
+ </summary>
+	<param name="ListTitle">String:</param>
+	<returns>WunderList.List:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.UpdateList(Ceptara.Wunderlist.List)">
+	<summary>
+ Updates a list's title
+ </summary>
+	<param name="updList">Wunderlist.List:</param>
+	<returns>Wunderlist.List:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RemoveList(System.String,System.Int64)">
+	<summary>
+ Removes the specified list from the service
+ </summary>
+	<param name="ListId">String: Uniqued id for the list</param>
+	<param name="Revision">Long: Revision of the list</param>
+	<returns>Boolean: Returns True if successful</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetTasks(System.String)">
+	<summary>
+ Retrieves the active tasks from the specified list.
+ </summary>
+	<param name="ListID">String: List identifier</param>
+	<returns>List(Of Task):</returns>
+	<remarks>Does not get the 'completed' tasks - use GetTasks(list_id, completed) query
+ to return the completed tasks.</remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetTasks(System.String,System.Boolean)">
+	<summary>
+ Retrieves the complete or incomplete tasks from the specified list.
+ </summary>
+	<param name="ListID">String: List Identifier</param>
+	<param name="completed">Boolean: TRUE = complete</param>
+	<returns>List(Of Task):</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetTask(System.String)">
+	<summary>
+ Retrieves the specified task from the service.
+ </summary>
+	<param name="TaskId">String: task identifier</param>
+	<returns>Wunderlist.Task:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.InsertTask(Ceptara.Wunderlist.Task)">
+	<summary>
+ Adds a new task to the list specified by the insTask parameter
+ </summary>
+	<param name="insTask">Wunderlist.Task:</param>
+	<returns>Wunderlist.Task:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.UpdateTask(Ceptara.Wunderlist.Task)">
+	<summary>
+ Updates an existing task using the properties specified
+ in the updTask parameter
+ </summary>
+	<param name="updTask">Wunderlist.Task:</param>
+	<returns>Wunderlist.Task:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RemoveTask(System.String,System.Int64)">
+	<summary>
+ Removes the specified task from the service
+ </summary>
+	<param name="TaskId">String: Uniqued id for the task</param>
+	<param name="Revision">Long: Revision of the task</param>
+	<returns>Boolean: Returns True if successful</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetMyUserAsync">
+	<summary>
+ Retrieve the currently logged in user's profile information off
+ the UI thread.
+ </summary>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetListsAsync">
+	<summary>
+ Returns a collection of lists from the service asynchronously
+ </summary>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetListAsync(System.String)">
+	<summary>
+ Returns the specified list.
+ </summary>
+	<param name="listId">String: List identifier</param>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.CreateListAsync(System.String)">
+	<summary>
+ Creates a new list on the service.
+ </summary>
+	<param name="ListTitle">String:</param>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.UpdateListAsync(Ceptara.Wunderlist.List)">
+	<summary>
+ Updates a list's title
+ </summary>
+	<param name="updList">Wunderlist.List:</param>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RemoveListAsync(System.String,System.Int64)">
+	<summary>
+ Removes the specified list from the service
+ </summary>
+	<param name="ListId">String: Uniqued id for the list</param>
+	<param name="Revision">Long: Revision of the list</param>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetTasksAsync(System.String)">
+	<summary>
+ Retrieves the active tasks from the specified list asynchrously.
+ </summary>
+	<param name="ListID">String: List identifier</param>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetTasksAsync(System.String,System.Boolean)">
+	<summary>
+ Retrieves the complete or incomplete tasks from the specified list.
+ </summary>
+	<param name="ListID">String: List Identifier</param>
+	<param name="completed">Boolean: TRUE = complete</param>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetTaskAsync(System.String)">
+	<summary>
+ Retrieves the specified task from the service.
+ </summary>
+	<param name="TaskId">String: task identifier</param>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.InsertTaskAsync(Ceptara.Wunderlist.Task)">
+	<summary>
+ Adds a new task to the list specified by the insTask parameter
+ </summary>
+	<param name="insTask">Wunderlist.Task:</param>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.UpdateTaskAsync(Ceptara.Wunderlist.Task)">
+	<summary>
+ Updates an existing task using the properties specified
+ in the updTask parameter
+ </summary>
+	<param name="updTask">Wunderlist.Task:</param>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RemoveTaskAsync(System.String,System.Int64)">
+	<summary>
+ Removes the specified task from the service
+ </summary>
+	<param name="TaskId">String: Uniqued id for the task</param>
+	<param name="Revision">Long: Revision of the task</param>
+	<remarks></remarks>
+</member><member name="F:Ceptara.Wunderlist.Client.oAuthAccessToken.expirationPeriod">
+	<summary>
+ Default expiration period from Wunderlist
+ </summary>
+	<remarks>Not declared on their site, assuming 48 hrs</remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.oAuthAccessToken.Token">
+	<summary>
+ The access token issued by the service
+ </summary>
+	<value>String:</value>
+	<returns>String:</returns>
+	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.oAuthAccessToken.Issued">
+	<summary>
+ The date and time the token was issued.
+ </summary>
+	<value>Date:</value>
+	<returns>Date:</returns>
+	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.oAuthAccessToken.Expires">
+	<summary>
+ The date and time the token expires
+ </summary>
+	<value>Date:</value>
+	<returns>Date:</returns>
+	<remarks>If the token is expired, should as the user to 
+ reenter their credentials.</remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.oAuthAccessToken.GetStorageString">
+	<summary>
+ Serializes the object instance to a Json formatted string
+ </summary>
+	<returns>String:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.oAuthAccessToken.RestoreFromStorageString(System.String)">
+	<summary>
+ Fills the object instance with the specified
+ Json formatted string.
+ </summary>
+	<param name="strJson">String:</param>
+	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.RESTHelper.BaseURL">
+	<summary>
+ Base URL to be used the RESTful call
+ </summary>
+	<value>String:</value>
+	<returns>String:</returns>
+	<remarks>Defaults to http://a.wunderlist.com/ </remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.RESTHelper.AccessToken">
+	<summary>
+ Access token to be used in all calls subsequent to the authorization calls.
+ </summary>
+	<value>String:</value>
+	<returns>String:</returns>
+	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.RESTHelper.StatusCode">
+	<summary>
+ Last HTTP Status code returned.
+ </summary>
+	<value></value>
+	<returns>System.Net.HttpStatusCode:</returns>
+	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.RESTHelper.ErrorMessage">
+	<summary>
+ Returns the last web exception message.
+ </summary>
+	<value></value>
+	<returns>String:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RESTHelper.GetArrayListJSON(System.String,System.String)">
+	<summary>
+ Get a collection of objects (JSON Array) from a JSON String.
+ </summary>
+	<param name="jsonInput">JSON String</param>
+	<param name="ArrayName">Array Name</param>
+	<returns>ArrayList</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RESTHelper.GetKeyValueFromJSON(System.String,System.String)">
+	<summary>
+ Get Value from a specified Key from a JSON string.
+ </summary>
+	<param name="jsonInput">JSON String</param>
+	<param name="Key">Key of interest</param>
+	<returns>Object</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RESTHelper.WebResponseGetAsync(System.Net.HttpWebRequest)">
+	<summary>
+ Process the web response.
+ </summary>
+	<param name="webRequest">HTTPWebRequest</param>
+	<returns>The response data.</returns>
+</member><member name="P:Ceptara.Wunderlist.ObjectBase.ID">
+	<summary>
+ Allows the use of the ID property in the Data.ObjectBase class
+ versus reiterating here.
+ </summary>
+	<value></value>
+	<returns></returns>
+	<remarks>Ceptara.Data.ObjectBase exists in the Ceptara.Core library</remarks>
+</member><member name="M:Ceptara.Wunderlist.ObjectBase.ToStringJson">
+	<summary>
+ Returns a Json string representing this object.
+ </summary>
+	<returns>String:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.ObjectBase.ToStringJSON(System.Object)">
+	<summary>
+ Creates a formatted JSON string containing the object's properties and values.
+ </summary>
+	<param name="obj">Object: e.g. Project, Task, etc.</param>
+	<returns>String</returns>
+	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.List.sensitivity">
+	<summary>
+ public is a reserved word in vb.net - so redirect
+ the Json public property to the local sensitivity property
+ during serialization and deserialization.
+ </summary>
+	<value></value>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.My.Resources.Resources.ResourceManager">
+	<summary>
+  Returns the cached ResourceManager instance used by this class.
+</summary>
+</member><member name="P:Ceptara.Wunderlist.My.Resources.Resources.Culture">
+	<summary>
+  Overrides the current thread's CurrentUICulture property for all
+  resource lookups using this strongly typed resource class.
+</summary>
+</member><member name="T:Ceptara.Wunderlist.My.Resources.Resources">
+	<summary>
+  A strongly-typed resource class, for looking up localized strings, etc.
+</summary>
+</member>
+</members>
+</doc>

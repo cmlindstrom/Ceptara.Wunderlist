@@ -1,0 +1,11 @@
+C:\Users\Chris\Documents\GitHub\Ceptara.Wunderlist\bin\Debug\Ceptara.Wunderlist.dll
+C:\Users\Chris\Documents\GitHub\Ceptara.Wunderlist\bin\Debug\Ceptara.Wunderlist.pdb
+C:\Users\Chris\Documents\GitHub\Ceptara.Wunderlist\bin\Debug\Ceptara.Wunderlist.xml
+C:\Users\Chris\Documents\GitHub\Ceptara.Wunderlist\bin\Debug\Newtonsoft.Json.dll
+C:\Users\Chris\Documents\GitHub\Ceptara.Wunderlist\bin\Debug\Newtonsoft.Json.xml
+C:\Users\Chris\Documents\GitHub\Ceptara.Wunderlist\obj\Debug\Ceptara.Wunderlist.vbprojResolveAssemblyReference.cache
+C:\Users\Chris\Documents\GitHub\Ceptara.Wunderlist\obj\Debug\Ceptara.Wunderlist.Resources.resources
+C:\Users\Chris\Documents\GitHub\Ceptara.Wunderlist\obj\Debug\Ceptara.Wunderlist.vbproj.GenerateResource.Cache
+C:\Users\Chris\Documents\GitHub\Ceptara.Wunderlist\obj\Debug\Ceptara.Wunderlist.dll
+C:\Users\Chris\Documents\GitHub\Ceptara.Wunderlist\obj\Debug\Ceptara.Wunderlist.xml
+C:\Users\Chris\Documents\GitHub\Ceptara.Wunderlist\obj\Debug\Ceptara.Wunderlist.pdb
