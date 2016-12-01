@@ -2,6 +2,7 @@
 The repository contains methods to interact with the Wunderlist v1 RESTful API - the libary is written in vb.net.  It contains:
 
 1) Client: used to interface with the Wunderlist service
+
 2) AppConfig: class used to store your app keys, i.e. ClientId, ClientSecret and callBack URL.
 
 The library supports interactions with the List and Task services.
