@@ -68,6 +68,7 @@
     <Import Include="System.Threading.Tasks" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="clsWunderlistWebHelpers.vb" />
     <Compile Include="clsWunderlistAppConfig.vb" />
     <Compile Include="clsWunderlistClient.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />

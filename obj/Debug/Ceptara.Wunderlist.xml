@@ -6,7 +6,22 @@ Ceptara.Wunderlist
 </name>
 </assembly>
 <members>
-<member name="F:Ceptara.Wunderlist.Client._appKeys">
+<member name="M:Ceptara.Wunderlist.Web.StrFromPtrA(System.IntPtr)">
+	<summary>
+ Converts a IntPtr to a string.
+ </summary>
+	<param name="lptr">IntPtr:</param>
+	<returns>String:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Web.RemoveCookies(System.String)">
+	<summary>
+ Enumerates the Cookie cache and removes cookies with the
+ specified name in the URL
+ </summary>
+	<param name="strName">String:</param>
+	<returns>Integer: # of caches removed</returns>
+	<remarks></remarks>
+</member><member name="F:Ceptara.Wunderlist.Client._appKeys">
 	<summary>
  Container for accessing the keys issued by the Wunderlist Developer
  web client
@@ -86,6 +101,13 @@ Ceptara.Wunderlist
  Returns True if the current saved token is still valid.,
  </summary>
 	<returns>Boolean:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.ForceUserLogin">
+	<summary>
+ Calls this method before calling the Connect method
+ to force the user to enter his/her Wunderlist
+ credentials
+ </summary>
 	<remarks></remarks>
 </member><member name="M:Ceptara.Wunderlist.Client.GetMyUser">
 	<summary>
@@ -184,7 +206,7 @@ Ceptara.Wunderlist
 	<summary>
  Returns a collection of lists from the service asynchronously
  </summary>
-	<remarks></remarks>
+	<remarks>Raises the CollectionUpdated event when completed</remarks>
 </member><member name="M:Ceptara.Wunderlist.Client.GetListAsync(System.String)">
 	<summary>
  Returns the specified list.
@@ -249,6 +271,30 @@ Ceptara.Wunderlist
 	<param name="TaskId">String: Uniqued id for the task</param>
 	<param name="Revision">Long: Revision of the task</param>
 	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.SynchronizationEventArgs.LocalSyncRequests">
+	<summary>
+ Collection of SyncObjects containing the specified changes to
+ make in the requestor's datastore
+ </summary>
+	<value></value>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.SynchronizationEventArgs.SvcItemsToProcess">
+	<summary>
+ SyncObjects collection for items that have changed
+ on the service since the 'SinceDate'
+ </summary>
+	<value></value>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.SynchronizationEventArgs.SvcItemsProcessed">
+	<summary>
+ SyncObjects collection of changes made to the service
+ in this sync cycle
+ </summary>
+	<value></value>
+	<returns></returns>
+	<remarks></remarks>
 </member><member name="F:Ceptara.Wunderlist.Client.oAuthAccessToken.expirationPeriod">
 	<summary>
  Default expiration period from Wunderlist
@@ -303,6 +349,14 @@ Ceptara.Wunderlist
 	<value>String:</value>
 	<returns>String:</returns>
 	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.RESTHelper.TrackCookies">
+	<summary>
+ Ask RestHelper to capture cookies on the
+ responses and requests.
+ </summary>
+	<value>Boolean:</value>
+	<returns>Boolean:</returns>
+	<remarks>Defaults to False</remarks>
 </member><member name="P:Ceptara.Wunderlist.Client.RESTHelper.StatusCode">
 	<summary>
  Last HTTP Status code returned.
@@ -317,6 +371,21 @@ Ceptara.Wunderlist
 	<value></value>
 	<returns>String:</returns>
 	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.RESTHelper.ResponseCookies">
+	<summary>
+ Collection of the cookies resulting from the last
+ web request.
+ </summary>
+	<value></value>
+	<returns>RESTHelper.Cookies:</returns>
+	<remarks>Set TrackCookies to True to catch the cookies.</remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.RESTHelper.RequestCookies">
+	<summary>
+ Collection of the cookies from the last web response.
+ </summary>
+	<value></value>
+	<returns>RESTHelper.Cookies:</returns>
+	<remarks>Set TrackCookies to True to catch the cookies.</remarks>
 </member><member name="M:Ceptara.Wunderlist.Client.RESTHelper.GetArrayListJSON(System.String,System.String)">
 	<summary>
  Get a collection of objects (JSON Array) from a JSON String.
@@ -333,12 +402,38 @@ Ceptara.Wunderlist
 	<param name="Key">Key of interest</param>
 	<returns>Object</returns>
 	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RESTHelper.RemoveCookies">
+	<summary>
+ Deletes the Wunderlist cookies in the IE cache
+ </summary>
+	<remarks>Can force the user to log in versus using
+ cached credentials.</remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RESTHelper.ClearCookies">
+	<summary>
+ Shared method to delete the Wunderlist cookies in the IE cache
+ </summary>
+	<remarks>Can force the user to log in versus using
+ cached credentials.</remarks>
 </member><member name="M:Ceptara.Wunderlist.Client.RESTHelper.WebResponseGetAsync(System.Net.HttpWebRequest)">
 	<summary>
  Process the web response.
  </summary>
 	<param name="webRequest">HTTPWebRequest</param>
 	<returns>The response data.</returns>
+</member><member name="M:Ceptara.Wunderlist.Client.RESTHelper.Cookie.Fill(System.Net.Cookie)">
+	<summary>
+ Fills the instance with a copy of the specified
+ System.Net.Cookie.
+ </summary>
+	<param name="ck">System.Net.Cookie:</param>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RESTHelper.Cookies.GetItemFromID(System.String)">
+	<summary>
+ Retrieves and item in the collection the the corresponding ID.
+ </summary>
+	<param name="ID">String</param>
+	<returns>Object</returns>
+	<remarks></remarks>
 </member><member name="P:Ceptara.Wunderlist.ObjectBase.ID">
 	<summary>
  Allows the use of the ID property in the Data.ObjectBase class
@@ -368,6 +463,12 @@ Ceptara.Wunderlist
  </summary>
 	<value></value>
 	<returns></returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.ItemDescriptor.ToStringJson">
+	<summary>
+ Creates a Json formatted string of the object instance.
+ </summary>
+	<returns>String:</returns>
 	<remarks></remarks>
 </member><member name="P:Ceptara.Wunderlist.My.Resources.Resources.ResourceManager">
 	<summary>

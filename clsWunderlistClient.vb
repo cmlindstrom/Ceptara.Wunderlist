@@ -117,6 +117,21 @@ Public Class Client
         End Try
     End Sub
 
+    Private Sub wb_OAuth_Navigating(sender As Object, e As WebBrowserNavigatingEventArgs) Handles wb_OAuth.Navigating
+
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":wb_OAuth_Navigated"
+        Dim strDefault As String = "Method failed."
+        Try
+            If Not IsNothing(wb_OAuth.Document) Then
+                ' wb_OAuth.Document.Cookie = ""
+            End If
+
+        Catch ex As Exception
+
+        End Try
+    End Sub
+
     Private Sub wb_OAuth_Navigated(ByVal sender As Object, _
                                    ByVal e As System.Windows.Forms.WebBrowserNavigatedEventArgs) _
                                         Handles wb_OAuth.Navigated
@@ -133,6 +148,8 @@ Public Class Client
             Dim strURLPath As String = e.Url.AbsoluteUri
 
             strTrace = "Returned Title: '" & strTitle & "' and URL '" & strURLPath & "'."
+
+            '  Dim strCookie As String = wb_OAuth.Document.Cookie
 
             If myURI.AbsoluteUri.ToLower.Contains("oauth2redirect") Then
 
@@ -292,6 +309,16 @@ Public Class Client
         End If
 
     End Function
+
+    ''' <summary>
+    ''' Calls this method before calling the Connect method
+    ''' to force the user to enter his/her Wunderlist
+    ''' credentials
+    ''' </summary>
+    ''' <remarks></remarks>
+    Public Sub ForceUserLogin()
+        RESTHelper.ClearCookies()
+    End Sub
 
 #Region "Synchronous Calls"
 
@@ -1056,7 +1083,7 @@ Public Class Client
     ''' <summary>
     ''' Returns a collection of lists from the service asynchronously
     ''' </summary>
-    ''' <remarks></remarks>
+    ''' <remarks>Raises the CollectionUpdated event when completed</remarks>
     Public Async Sub GetListsAsync()
 
         Dim strTrace As String = "General Fault."
@@ -1805,9 +1832,58 @@ Public Class Client
         Debug.Print(Method & "|" & Action & "|" & Message)
     End Sub
 
+    Public Overloads Shared Function GenerateUniqueID() As String
+        Dim strRoutine As String = "clsData:Database:GenerateUniqueID"
+        Try
+            Dim g As Guid = System.Guid.NewGuid
+            Return g.ToString
+        Catch ex As Exception
+            Debug.Print(strRoutine & "|ERROR|" & ex.Message)
+            Return String.Empty
+        End Try
+    End Function
+
 #End Region
 
 #Region "Supporting Classes"
+
+    Public Class SynchronizationEventArgs
+        Inherits EventArgs
+
+        ''' <summary>
+        ''' Collection of SyncObjects containing the specified changes to
+        ''' make in the requestor's datastore
+        ''' </summary>
+        ''' <value></value>
+        ''' <returns></returns>
+        ''' <remarks></remarks>
+        Public Property LocalSyncRequests As Object = Nothing
+
+        ''' <summary>
+        ''' SyncObjects collection for items that have changed
+        ''' on the service since the 'SinceDate'
+        ''' </summary>
+        ''' <value></value>
+        ''' <returns></returns>
+        ''' <remarks></remarks>
+        Public Property SvcItemsToProcess As Object = Nothing
+
+        ''' <summary>
+        ''' SyncObjects collection of changes made to the service
+        ''' in this sync cycle
+        ''' </summary>
+        ''' <value></value>
+        ''' <returns></returns>
+        ''' <remarks></remarks>
+        Public Property SvcItemsProcessed As Object = Nothing
+
+        Public Sub New(LocalSyncRequests As Object, SvcItemsToProcess As Object, SvcItemsProcessed As Object)
+            _LocalSyncRequests = LocalSyncRequests
+            _SvcItemsToProcess = SvcItemsToProcess
+            _SvcItemsProcessed = SvcItemsProcessed
+        End Sub
+
+    End Class
 
     Public Class CollectionEventArgs
         Inherits EventArgs
@@ -2002,6 +2078,23 @@ Public Class Client
         Dim _accessToken As String = String.Empty
 
         ''' <summary>
+        ''' Ask RestHelper to capture cookies on the
+        ''' responses and requests.
+        ''' </summary>
+        ''' <value>Boolean:</value>
+        ''' <returns>Boolean:</returns>
+        ''' <remarks>Defaults to False</remarks>
+        Public Property TrackCookies As Boolean
+            Get
+                Return _trackCookies
+            End Get
+            Set(value As Boolean)
+                _trackCookies = value
+            End Set
+        End Property
+        Dim _trackCookies As Boolean = False
+
+        ''' <summary>
         ''' Last HTTP Status code returned.
         ''' </summary>
         ''' <value></value>
@@ -2027,6 +2120,33 @@ Public Class Client
         End Property
         Dim _errorMessage As String = String.Empty
 
+        ''' <summary>
+        ''' Collection of the cookies resulting from the last
+        ''' web request.
+        ''' </summary>
+        ''' <value></value>
+        ''' <returns>RESTHelper.Cookies:</returns>
+        ''' <remarks>Set TrackCookies to True to catch the cookies.</remarks>
+        Public ReadOnly Property ResponseCookies As Cookies
+            Get
+                Return _responseCookies
+            End Get
+        End Property
+        Dim _responseCookies As Cookies = Nothing
+
+        ''' <summary>
+        ''' Collection of the cookies from the last web response.
+        ''' </summary>
+        ''' <value></value>
+        ''' <returns>RESTHelper.Cookies:</returns>
+        ''' <remarks>Set TrackCookies to True to catch the cookies.</remarks>
+        Public ReadOnly Property RequestCookies As Cookies
+            Get
+                Return _requestCookies
+            End Get
+        End Property
+        Dim _requestCookies As Cookies = Nothing
+
 #End Region
 
 #Region "Events"
@@ -2041,6 +2161,9 @@ Public Class Client
 
         Public Sub New(ByVal Client_ID As String)
             _clientID = Client_ID
+
+            _responseCookies = New Cookies
+            _requestCookies = New Cookies
         End Sub
 
 #End Region
@@ -2242,6 +2365,24 @@ Public Class Client
             End Try
         End Function
 
+        ''' <summary>
+        ''' Deletes the Wunderlist cookies in the IE cache
+        ''' </summary>
+        ''' <remarks>Can force the user to log in versus using
+        ''' cached credentials.</remarks>
+        Public Sub RemoveCookies()
+            Web.RemoveCookies("Wunderlist")
+        End Sub
+
+        ''' <summary>
+        ''' Shared method to delete the Wunderlist cookies in the IE cache
+        ''' </summary>
+        ''' <remarks>Can force the user to log in versus using
+        ''' cached credentials.</remarks>
+        Public Shared Sub ClearCookies()
+            Web.RemoveCookies("Wunderlist")
+        End Sub
+
 #End Region
 
 #Region "Supporting Methods"
@@ -2350,12 +2491,50 @@ Public Class Client
                 Dim responseData As String = ""
                 '  _errorCode = Net.WebExceptionStatus.Success
 
+                If _trackCookies Then
+                    '  Capture the request cookies
+                    If Not IsNothing(webRequest.CookieContainer) Then
+                        Dim myURI As System.Uri = webRequest.RequestUri
+                        Dim myContainer As System.Net.CookieContainer = webRequest.CookieContainer
+                        If Not IsNothing(myContainer) Then
+                            Dim myCookies As System.Net.CookieCollection = myContainer.GetCookies(myURI)
+
+                            If Not IsNothing(myCookies) Then
+                                _requestCookies = New Cookies
+                                For Each c As System.Net.Cookie In myCookies
+                                    Dim myC As New Cookie
+                                    myC.Fill(c)
+                                    _requestCookies.Add(myC)
+                                Next
+                            End If
+                        End If
+
+                    Else
+                        webRequest.CookieContainer = New Net.CookieContainer
+                    End If
+                End If
+
                 Dim myResponse As System.Net.HttpWebResponse = webRequest.GetResponse
                 _statusCode = myResponse.StatusCode
 
                 responseReader = New StreamReader(myResponse.GetResponseStream())
                 responseData = responseReader.ReadToEnd()
                 responseReader.Close()
+
+                ' Close the response object
+                myResponse.Close()
+
+                If _trackCookies Then
+                    ' Capture the response cookies
+                    If Not IsNothing(myResponse.Cookies) Then
+                        _responseCookies = New Cookies
+                        For Each c As System.Net.Cookie In myResponse.Cookies
+                            Dim myC As New Cookie
+                            myC.Fill(c)
+                            _responseCookies.Add(myC)
+                        Next
+                    End If
+                End If
 
                 ' Dim i As System.Net.WebExceptionStatus
                 '   _errorCode = i
@@ -2492,6 +2671,29 @@ Public Class Client
                 Net.ServicePointManager.ServerCertificateValidationCallback = _
                     Function(obj As [Object], certificate As X509Certificate, chain As X509Chain, errors As System.Net.Security.SslPolicyErrors) (True)
 
+                If _trackCookies Then
+                    '  Capture the request cookies
+                    If Not IsNothing(webRequest.CookieContainer) Then
+                        Dim myURI As System.Uri = webRequest.RequestUri
+                        Dim myContainer As System.Net.CookieContainer = webRequest.CookieContainer
+                        If Not IsNothing(myContainer) Then
+                            Dim myCookies As System.Net.CookieCollection = myContainer.GetCookies(myURI)
+
+                            If Not IsNothing(myCookies) Then
+                                _requestCookies = New Cookies
+                                For Each c As System.Net.Cookie In myCookies
+                                    Dim myC As New Cookie
+                                    myC.Fill(c)
+                                    _requestCookies.Add(myC)
+                                Next
+                            End If
+                        End If
+
+                    Else
+                        webRequest.CookieContainer = New Net.CookieContainer
+                    End If
+                End If
+
                 Dim responseData As String = ""
 
                 Dim myResponse As System.Net.HttpWebResponse = Await webRequest.GetResponseAsync
@@ -2500,6 +2702,21 @@ Public Class Client
                 responseReader = New StreamReader(myResponse.GetResponseStream())
                 responseData = responseReader.ReadToEnd()
                 responseReader.Close()
+
+                ' Close the response
+                myResponse.Close()
+
+                If _trackCookies Then
+                    ' Capture the response cookies
+                    If Not IsNothing(myResponse.Cookies) Then
+                        _responseCookies = New Cookies
+                        For Each c As System.Net.Cookie In myResponse.Cookies
+                            Dim myC As New Cookie
+                            myC.Fill(c)
+                            _responseCookies.Add(myC)
+                        Next
+                    End If
+                End If
 
                 Return responseData
 
@@ -2531,11 +2748,181 @@ Public Class Client
 
 #Region "Supporting Classes"
 
+        Public Class Cookie
+
+#Region "Fields"
+
+            Private Const _rootClass As String = "RESTHelper.Cookie"
+
+#End Region
+
+#Region "Properties"
+
+            Public Property ID As String = String.Empty
+
+            Public Property Comment As String = String.Empty
+            Public Property Discard As Boolean = False
+            Public Property Domain As String = String.Empty
+            Public Property Expired As Boolean = False
+            Public Property Expires As Date = #1/1/1970#
+            Public Property HttpOnly As Boolean = False
+            Public Property Name As String = String.Empty
+            Public Property Path As String = String.Empty
+            Public Property Port As String = String.Empty
+            Public Property Secure As Boolean = False
+            Public Property Timestamp As Date = #1/1/1970#
+            Public Property Value As String = String.Empty
+            Public Property Version As Integer = -1
+
+#End Region
+
+#Region "Events"
+
+#End Region
+
+#Region "Event Handlers"
+
+#End Region
+
+#Region "Constructor"
+
+            Public Sub New()
+                _ID = GenerateUniqueID()
+            End Sub
+
+#End Region
+
+#Region "Methods"
+
+            ''' <summary>
+            ''' Fills the instance with a copy of the specified
+            ''' System.Net.Cookie.
+            ''' </summary>
+            ''' <param name="ck">System.Net.Cookie:</param>
+            ''' <remarks></remarks>
+            Public Sub Fill(ByVal ck As System.Net.Cookie)
+
+                Dim strTrace As String = "General Fault."
+                Dim strRoutine As String = _rootClass & ":Fill"
+                Dim strDefault As String = "Method failed."
+                Try
+                    _Comment = ck.Comment
+                    _Discard = ck.Discard
+                    _Domain = ck.Domain
+                    _Expired = ck.Expired
+                    _Expires = ck.Expires
+                    _HttpOnly = ck.HttpOnly
+                    _Name = ck.Name
+                    _Path = ck.Path
+                    _Port = ck.Port
+                    _Secure = ck.Secure
+                    _Timestamp = ck.TimeStamp
+                    _Value = ck.Value
+                    _Version = ck.Version
+                Catch ex As Exception
+
+                End Try
+            End Sub
+
+#End Region
+
+#Region "Supporting Methods"
+
+#End Region
+
+#Region "Supporting Classes"
+
+#End Region
+
+
+        End Class
+
+        Public Class Cookies
+            Inherits CollectionBase
+
+
+
+#Region "Fields"
+
+            Dim _rootClass As String = "RESTHelper.Cookies"
+
+#End Region
+
+#Region "Properties"
+
+
+#End Region
+
+#Region "Constructor"
+
+            Public Sub New()
+                MyBase.New()
+            End Sub
+
+#End Region
+
+#Region "Methods"
+
+            Public Sub Add(ByVal o As Object)
+                Try
+                    Me.InnerList.Add(o)
+                Catch ex As Exception
+
+                End Try
+            End Sub
+
+            Public Function Item(ByVal index As Integer) As Object
+                Try
+                    Return Me.InnerList(index)
+                Catch ex As Exception
+                    Return Nothing
+                End Try
+            End Function
+
+            ''' <summary>
+            ''' Retrieves and item in the collection the the corresponding ID.
+            ''' </summary>
+            ''' <param name="ID">String</param>
+            ''' <returns>Object</returns>
+            ''' <remarks></remarks>
+            Public Function GetItemFromID(ByVal ID As String) As Object
+                Dim strTrace As String = "General Fault."
+                Dim strRoutine As String = _rootClass & ":GetItemFromID"
+                Try
+                    If String.IsNullOrEmpty(ID) Then
+                        strTrace = "No ID was specified."
+                        Throw New Exception("Unable to get the specified item.")
+                    End If
+
+                    Dim retObject As Object = Nothing
+                    For i = 0 To Me.InnerList.Count - 1
+                        Dim strID As String = TryCast(Me.InnerList(i).ID, String)
+                        If strID.ToUpper = ID.ToUpper Then
+                            retObject = Me.InnerList(i)
+                        End If
+                    Next
+
+                    Return retObject
+                Catch ex As Exception
+                    LogErr(strTrace & " " & ex.Message, ex, strRoutine)
+                    Return Nothing
+                End Try
+            End Function
+
+#End Region
+
+            Private Sub LogErr(ByVal Message As String, ByVal myEx As Exception, ByVal Method As String)
+                Debug.Print(Method & "|ERROR|" & Message & " " & myEx.Message)
+            End Sub
+
+        End Class
+
 #End Region
 
     End Class
 
 #End Region
+
 
 End Class
 
@@ -2692,6 +3079,11 @@ Public Class Task
     Public Property list_id As Integer = 0
     Public Property starred As Boolean = False
     Public Property completed As Boolean = False
+    Public Property completed_at As Date = ObjectBase.DefaultDate
+    Public Property completed_by_id As Integer = 0
+
+    Public Property recurrence_type As String = String.Empty
+    Public Property recurrence_count As Integer = 0
 
 End Class
 
@@ -2709,6 +3101,60 @@ Public Class User
     Public Property email As String = String.Empty
 
 End Class
+
+Public Class ItemDescriptor
+
+    Private Const _rootClass As String = "ItemDescriptor"
+
+    Public Property type As String = String.Empty
+    Public Property revision As Integer = 0
+    Public Property list_id As Integer = 0
+
+    Public Sub Fill(ByVal strJson As String)
+
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":Fill"
+        Dim strDefault As String = "Method failed."
+        Try
+            Dim obj As New ItemDescriptor
+            obj = Newtonsoft.Json.JsonConvert.DeserializeObject(strJson, obj.GetType)
+
+            Me.type = obj.type
+            Me.revision = obj.revision
+            Me.list_id = obj.list_id
+
+        Catch ex As Exception
+
+        End Try
+
+    End Sub
+
+    ''' <summary>
+    ''' Creates a Json formatted string of the object instance.
+    ''' </summary>
+    ''' <returns>String:</returns>
+    ''' <remarks></remarks>
+    Public Function ToStringJson() As String
+
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":ToStringJSON"
+        Dim strDefault As String = "Unable to produce an JSON record string."
+        Try
+
+            Dim strReturn As String = Newtonsoft.Json.JsonConvert.SerializeObject(Me)
+
+            Return strReturn
+
+        Catch ex As Exception
+            Return String.Empty
+        End Try
+    End Function
+
+
+End Class
+
+
+
 
 
 

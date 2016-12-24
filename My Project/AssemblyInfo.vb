@@ -8,11 +8,11 @@ Imports System.Runtime.InteropServices
 
 ' Review the values of the assembly attributes
 
-<Assembly: AssemblyTitle("Ceptara.Wunderlist")> 
-<Assembly: AssemblyDescription("")> 
-<Assembly: AssemblyCompany("")> 
-<Assembly: AssemblyProduct("Ceptara.Wunderlist")> 
-<Assembly: AssemblyCopyright("Copyright ©  2016")> 
+<Assembly: AssemblyTitle("Wunderlist v1 RESTful Interface")>
+<Assembly: AssemblyDescription("")>
+<Assembly: AssemblyCompany("Ceptara Corp.")>
+<Assembly: AssemblyProduct("Ceptara.Wunderlist")>
+<Assembly: AssemblyCopyright("Copyright ©  Ceptara Corp. 2016")>
 <Assembly: AssemblyTrademark("")> 
 
 <Assembly: ComVisible(False)>
