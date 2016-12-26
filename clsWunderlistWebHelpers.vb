@@ -143,6 +143,7 @@ Public Class Web
             Return strReturn.Trim
 
         Catch ex As Exception
+            Client.LogError(strTrace, ex, strRoutine)
             Return String.Empty
         End Try
 
@@ -228,6 +229,7 @@ SkipOut:
             Return iReturn
 
         Catch ex As Exception
+            Client.LogError(strTrace, ex, strRoutine)
             Return -1
         End Try
 

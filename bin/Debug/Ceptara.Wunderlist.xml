@@ -6,22 +6,7 @@ Ceptara.Wunderlist
 </name>
 </assembly>
 <members>
-<member name="M:Ceptara.Wunderlist.Web.StrFromPtrA(System.IntPtr)">
-	<summary>
- Converts a IntPtr to a string.
- </summary>
-	<param name="lptr">IntPtr:</param>
-	<returns>String:</returns>
-	<remarks></remarks>
-</member><member name="M:Ceptara.Wunderlist.Web.RemoveCookies(System.String)">
-	<summary>
- Enumerates the Cookie cache and removes cookies with the
- specified name in the URL
- </summary>
-	<param name="strName">String:</param>
-	<returns>Integer: # of caches removed</returns>
-	<remarks></remarks>
-</member><member name="F:Ceptara.Wunderlist.Client._appKeys">
+<member name="F:Ceptara.Wunderlist.Client._appKeys">
 	<summary>
  Container for accessing the keys issued by the Wunderlist Developer
  web client
@@ -271,6 +256,45 @@ Ceptara.Wunderlist
 	<param name="TaskId">String: Uniqued id for the task</param>
 	<param name="Revision">Long: Revision of the task</param>
 	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.CleanFileName(System.String,System.String)">
+	<summary>
+  This function is used to remove any offending File OS characters that can cause an error in renaming a file, i.e.
+       "/ ? &lt; &gt; \ : * | "
+ </summary>
+	<param name="FileName">Filename to evalute</param>
+	<param name="delimeter">Replacement character, e.g. "_"</param>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetUserApplicationDataDirectoryPath">
+	<summary>
+ Get the user's application data directory path.
+ </summary>
+	<returns>String</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetUserTemporaryDirectoryPath">
+	<summary>
+ Gets the user's temporary cache (Internet Cache) directory path.
+ </summary>
+	<returns>String: Path or empty if an error occurs</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetCompanyApplicationsRootPath">
+	<summary>
+ Used to get a root path to where Company stores it's program and data information
+ </summary>
+	<returns>String: e.g. C:\Users\[Username]\AppData\Roaming\Company</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetApplicationRootPath(System.String)">
+	<summary>
+ Used to return a path to the application's root directory.  Based on where the user's Data Directory path lies.
+ </summary>
+	<returns>String</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetApplicationSystemPath(System.String)">
+	<summary>
+ Used to return a path to the application's system directory.
+ </summary>
+	<returns>String</returns>
+	<remarks></remarks>
 </member><member name="P:Ceptara.Wunderlist.Client.SynchronizationEventArgs.LocalSyncRequests">
 	<summary>
  Collection of SyncObjects containing the specified changes to
@@ -371,6 +395,13 @@ Ceptara.Wunderlist
 	<value></value>
 	<returns>String:</returns>
 	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.RESTHelper.Exception">
+	<summary>
+ Returns the last Try/Catch exception
+ </summary>
+	<value></value>
+	<returns>System.Exception:</returns>
+	<remarks></remarks>
 </member><member name="P:Ceptara.Wunderlist.Client.RESTHelper.ResponseCookies">
 	<summary>
  Collection of the cookies resulting from the last
@@ -386,6 +417,58 @@ Ceptara.Wunderlist
 	<value></value>
 	<returns>RESTHelper.Cookies:</returns>
 	<remarks>Set TrackCookies to True to catch the cookies.</remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RESTHelper.APIRequestAsync(System.String,System.String,System.Collections.Generic.Dictionary{System.String,System.Object})">
+	<summary>
+ Makes an API request Asychronously
+ </summary>
+	<param name="method">String: e.g. GET etc.</param>
+	<param name="resource">String: Resource to retrieve</param>
+	<param name="Params">Dictionary(Of String, Object): Query string parameters</param>
+	<returns>String:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RESTHelper.APIRequestAsync(System.String,System.String)">
+	<summary>
+ Makes an API request Asynchrously
+ </summary>
+	<param name="method">String: e.g. GET, PUT, etc.</param>
+	<param name="resource">String: Resource to retrieve</param>
+	<returns>String:</returns>
+	<remarks>Used when no query string or POST data is required</remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RESTHelper.APIRequestAsync(System.String,System.String,System.String)">
+	<summary>
+ Makes an API request Asychronously
+ </summary>
+	<param name="method">String: e.g. POST, PUT</param>
+	<param name="resource">String: Resource to retrieve</param>
+	<param name="postData">String: POST or PUT data</param>
+	<returns>String:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RESTHelper.APIRequest(System.String,System.String,System.Collections.Generic.Dictionary{System.String,System.Object})">
+	<summary>
+ Makes an API request
+ </summary>
+	<param name="method">String: e.g. GET etc.</param>
+	<param name="resource">String: Resource to retrieve</param>
+	<param name="Params">Dictionary(Of String, Object): Query string parameters</param>
+	<returns>String:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RESTHelper.APIRequest(System.String,System.String)">
+	<summary>
+ Makes an API request 
+ </summary>
+	<param name="method">String: e.g. GET, PUT, etc.</param>
+	<param name="resource">String: Resource to retrieve</param>
+	<returns>String:</returns>
+	<remarks>Used when no query string or POST data is required</remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RESTHelper.APIRequest(System.String,System.String,System.String)">
+	<summary>
+ Makes an API request 
+ </summary>
+	<param name="method">String: e.g. POST, PUT</param>
+	<param name="resource">String: Resource to retrieve</param>
+	<param name="postData">String: POST or PUT data</param>
+	<returns>String:</returns>
+	<remarks></remarks>
 </member><member name="M:Ceptara.Wunderlist.Client.RESTHelper.GetArrayListJSON(System.String,System.String)">
 	<summary>
  Get a collection of objects (JSON Array) from a JSON String.
@@ -483,6 +566,21 @@ Ceptara.Wunderlist
 	<summary>
   A strongly-typed resource class, for looking up localized strings, etc.
 </summary>
+</member><member name="M:Ceptara.Wunderlist.Web.StrFromPtrA(System.IntPtr)">
+	<summary>
+ Converts a IntPtr to a string.
+ </summary>
+	<param name="lptr">IntPtr:</param>
+	<returns>String:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Web.RemoveCookies(System.String)">
+	<summary>
+ Enumerates the Cookie cache and removes cookies with the
+ specified name in the URL
+ </summary>
+	<param name="strName">String:</param>
+	<returns>Integer: # of caches removed</returns>
+	<remarks></remarks>
 </member>
 </members>
 </doc>

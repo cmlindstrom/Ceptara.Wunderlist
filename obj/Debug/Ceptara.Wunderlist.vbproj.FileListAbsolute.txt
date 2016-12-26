@@ -8,4 +8,3 @@ C:\Users\Chris\Documents\GitHub\Ceptara.Wunderlist\obj\Debug\Ceptara.Wunderlist.
 C:\Users\Chris\Documents\GitHub\Ceptara.Wunderlist\obj\Debug\Ceptara.Wunderlist.dll
 C:\Users\Chris\Documents\GitHub\Ceptara.Wunderlist\obj\Debug\Ceptara.Wunderlist.xml
 C:\Users\Chris\Documents\GitHub\Ceptara.Wunderlist\obj\Debug\Ceptara.Wunderlist.pdb
-C:\Users\Chris\Documents\GitHub\Ceptara.Wunderlist\obj\Debug\Ceptara.Wunderlist.vbprojResolveAssemblyReference.cache

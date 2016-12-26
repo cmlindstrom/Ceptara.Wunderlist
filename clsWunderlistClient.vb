@@ -287,7 +287,7 @@ Public Class Client
 
             Return True
         Catch ex As Exception
-            Debug.Print("Error: " & strTrace & " " & ex.Message)
+            LogErr(strTrace, ex, strRoutine)
             Return False
         End Try
 
@@ -300,13 +300,21 @@ Public Class Client
     ''' <remarks></remarks>
     Public Function IsTokenValid() As Boolean
 
-        Dim strResponse As String = _rh.APIRequest("GET", "lists")
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":IsTokenValid"
+        Dim strDefault As String = "Method failed."
+        Try
+            Dim strResponse As String = _rh.APIRequest("GET", "lists")
 
-        If String.IsNullOrEmpty(strResponse) Then
+            If String.IsNullOrEmpty(strResponse) Then
+                Return False
+            Else
+                Return True
+            End If
+        Catch ex As Exception
+            LogErr(strTrace, ex, strRoutine)
             Return False
-        Else
-            Return True
-        End If
+        End Try
 
     End Function
 
@@ -317,7 +325,14 @@ Public Class Client
     ''' </summary>
     ''' <remarks></remarks>
     Public Sub ForceUserLogin()
-        RESTHelper.ClearCookies()
+        Dim strTrace As String = String.Empty
+        Dim strRoutine As String = _rootClass & "ForceUserLogin"
+        Try
+            RESTHelper.ClearCookies()
+        Catch ex As Exception
+            LogErr(ex.Message, ex, strRoutine)
+        End Try
+
     End Sub
 
 #Region "Synchronous Calls"
@@ -1825,23 +1840,299 @@ Public Class Client
     End Sub
 
     Private Sub LogErr(ByVal Message As String, ByVal myEx As Exception, ByVal Method As String)
-        Debug.Print(Method & "|ERROR|" & Message & " " & myEx.Message)
+        Try
+            Debug.Print(Method & "|ERROR|" & Message & " " & myEx.Message & " (" & myEx.HResult & ").")
+        Catch ex As Exception
+
+        End Try
+    End Sub
+
+    Public Shared Sub LogError(ByVal Message As String, ByVal myEx As Exception, ByVal Method As String)
+
+        Try
+            Dim _logFileMaxSize As Long = 1000000
+
+            Debug.Print(Method & "|ERROR|" & Message & " " & myEx.Message & " (" & myEx.HResult & ").")
+
+            Dim strFileName As String = "SystemLog.txt"
+            Dim strFullPath As String = GetApplicationSystemPath() & "\" & strFileName
+
+            ' Overwrite Version
+            Dim Version As String = My.Application.Info.Version.ToString
+
+            Dim oWriter As StreamWriter
+            Dim strOutput As String = String.Empty
+
+            Dim strDate As String = Format(Now, "yyyy-MM-dd|hh:mm:ss.fff")
+
+            Dim fInfo As New FileInfo(strFullPath)
+
+            Dim bRetVal As Boolean = False
+
+            Dim strProfile As String = "Wunderlist"
+            Dim lFileLen As Long = fInfo.Length
+            If lFileLen > _logFileMaxSize Then  ' Delete log file if too large
+                fInfo.Delete()
+                oWriter = New StreamWriter(strFullPath, True)
+            Else
+                If fInfo.Exists Then
+                    oWriter = New StreamWriter(strFullPath, True)
+                Else
+                    oWriter = New StreamWriter(strFullPath, False)
+                End If
+            End If
+
+            Dim ErrNumber As Integer = myEx.HResult
+
+            strOutput = strDate & "|" & Version & "|" & strProfile & "|" & _
+                        CStr(ErrNumber) & "|" & CLng(System.Math.Abs(ErrNumber)).ToString("X") & "|" & _
+                        Method & "|" & Message
+
+            oWriter.WriteLine(strOutput)
+            oWriter.Close()
+
+            bRetVal = True
+
+        Catch ex As Exception
+            Debug.Print(Method & "|ERROR|" & Message & " " & ex.Message & " (" & ex.HResult & ").")
+        End Try
+
+    End Sub
+
+    Public Shared Sub LogError(ByVal Message As String, ByVal webEx As System.Net.WebException, ByVal method As String)
+        Try
+            LogError(Message, webEx.GetBaseException, method)
+            ' Debug.Print(method & "|ERROR|" & Message & " " & webEx.Message & " (" & webEx.HResult & ").")
+        Catch ex As Exception
+
+        End Try
     End Sub
 
     Private Sub LogAction(ByVal Action As String, ByVal Message As String, ByVal Method As String)
-        Debug.Print(Method & "|" & Action & "|" & Message)
+        Try
+            Debug.Print(Method & "|" & Action & "|" & Message)
+
+            Dim _logFileMaxSize As Long = 1000000
+
+            Dim fileName As String = "\SyncLog.txt"
+            Dim strFullPath As String = GetApplicationSystemPath(My.Application.Info.ProductName) & fileName
+            Dim fInfo As New FileInfo(strFullPath)
+
+            Dim oWriter As StreamWriter
+            Dim strOutput As String = String.Empty
+
+            Dim strDate As String = Format(Now, "yyyy-MM-dd|hh:mm:ss.fff")
+
+            Dim bRetVal As Boolean = False
+
+            Dim strProfile As String = "Wunderlist"
+            Dim Version As String = My.Application.Info.Version.ToString
+
+            Dim lFileLen As Long = fInfo.Length
+            If lFileLen > _logFileMaxSize Then  ' Delete log file if too large
+                fInfo.Delete()
+                oWriter = New StreamWriter(strFullPath, True)
+            Else
+                If fInfo.Exists Then
+                    oWriter = New StreamWriter(strFullPath, True)
+                Else
+                    oWriter = New StreamWriter(strFullPath, False)
+                End If
+            End If
+
+            strOutput = strDate & "|" & Version & "|" & strProfile & "|" & _
+                            Action & "|" & Method & "|" & Message
+            oWriter.WriteLine(strOutput)
+            oWriter.Close()
+
+        Catch ex As Exception
+
+        End Try
     End Sub
 
     Public Overloads Shared Function GenerateUniqueID() As String
+
         Dim strRoutine As String = "clsData:Database:GenerateUniqueID"
         Try
             Dim g As Guid = System.Guid.NewGuid
             Return g.ToString
         Catch ex As Exception
-            Debug.Print(strRoutine & "|ERROR|" & ex.Message)
+            LogError("", ex, strRoutine)
             Return String.Empty
         End Try
     End Function
+
+#Region "Library Methods"
+
+    ''' <summary>
+    '''  This function is used to remove any offending File OS characters that can cause an error in renaming a file, i.e.
+    '''       "/ ? &lt; &gt; \ : * | "
+    ''' </summary>
+    ''' <param name="FileName">Filename to evalute</param>
+    ''' <param name="delimeter">Replacement character, e.g. "_"</param>
+    ''' <returns></returns>
+    ''' <remarks></remarks>
+    Public Shared Function CleanFileName(ByVal FileName As String, _
+                    Optional ByVal delimeter As String = "_") As String
+
+        Dim strtrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":CleanFileName"
+        Try
+            strtrace = "Cleaning: '" & FileName & "'."
+
+            Dim vTemp As String
+
+            vTemp = Replace(FileName, "/", delimeter)
+            vTemp = Replace(vTemp, "?", delimeter)
+            vTemp = Replace(vTemp, "<", delimeter)
+            vTemp = Replace(vTemp, ">", delimeter)
+            vTemp = Replace(vTemp, "\", delimeter)
+            vTemp = Replace(vTemp, ":", delimeter)
+            vTemp = Replace(vTemp, "*", delimeter)
+            vTemp = Replace(vTemp, "|", delimeter)
+            vTemp = Replace(vTemp, ".", delimeter)
+            vTemp = Replace(vTemp, """", delimeter)
+
+            Return vTemp
+
+        Catch ex As Exception
+            Debug.Print(strRoutine & "|ERROR|" & strtrace & " " & ex.Message & " (" & ex.HResult & ").")
+            Return FileName
+        End Try
+    End Function
+
+    ''' <summary>
+    ''' Get the user's application data directory path.
+    ''' </summary>
+    ''' <returns>String</returns>
+    ''' <remarks></remarks>
+    Public Shared Function GetUserApplicationDataDirectoryPath() As String
+
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":GetUserApplicationDataDirectoryPath"
+        Try
+            Dim strDirectory As String = String.Empty
+            strDirectory = System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
+
+            Return strDirectory
+
+        Catch ex As Exception
+            Debug.Print(strRoutine & "|ERROR|" & strTrace & " " & ex.Message & " (" & ex.HResult & ").")
+            Return String.Empty
+        End Try
+    End Function
+
+    ''' <summary>
+    ''' Gets the user's temporary cache (Internet Cache) directory path.
+    ''' </summary>
+    ''' <returns>String: Path or empty if an error occurs</returns>
+    ''' <remarks></remarks>
+    Public Shared Function GetUserTemporaryDirectoryPath() As String
+        Try
+            Dim strDirectory As String = String.Empty
+            strDirectory = System.Environment.GetFolderPath(Environment.SpecialFolder.InternetCache)
+            Return strDirectory
+        Catch ex As Exception
+            Return String.Empty
+        End Try
+    End Function
+
+    ''' <summary>
+    ''' Used to get a root path to where Company stores it's program and data information
+    ''' </summary>
+    ''' <returns>String: e.g. C:\Users\[Username]\AppData\Roaming\Company</returns>
+    ''' <remarks></remarks>
+    Public Shared Function GetCompanyApplicationsRootPath() As String
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":GetCompanyApplicationsRootPath"
+        Try
+            'strRoot = "c:\temp" '  can't use GetProgramFilesDirectoryPath() access rights issue
+            Dim strCompanyDir As String = "\" & "Ceptara"
+            Dim strRoot As String = GetUserApplicationDataDirectoryPath()
+
+            strTrace = "Root: '" & strRoot & "' Company: '" & strCompanyDir & "'."
+
+            Dim strTemp As String = strRoot & strCompanyDir
+            Dim dInfo As New DirectoryInfo(strTemp)
+            If Not dInfo.Exists Then
+                MkDir(strTemp)
+            End If
+
+            Return strTemp
+        Catch ex As Exception
+            Debug.Print(strRoutine & "|ERROR|" & strTrace & " " & ex.Message & " (" & ex.HResult & ").")
+            Return "C:\Temp"
+        End Try
+    End Function
+
+    ''' <summary>
+    ''' Used to return a path to the application's root directory.  Based on where the user's Data Directory path lies.
+    ''' </summary>
+    ''' <returns>String</returns>
+    ''' <remarks></remarks>
+    Public Shared Function GetApplicationRootPath(Optional ByVal AppName As String = "") As String
+
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = "clsSystemInterface:GetApplicationRootPath"
+        Try
+            Dim strTemp As String = String.Empty
+
+            Dim strRoot As String = ""
+
+            Dim strAppDir As String = "\" & CleanFileName(My.Application.Info.AssemblyName)
+            If Not String.IsNullOrEmpty(AppName) Then
+                strAppDir = "\" & CleanFileName(AppName)
+            End If
+
+            strRoot = GetCompanyApplicationsRootPath()
+
+            strTrace = "Root: '" & strRoot & "' App: '" & strAppDir & "'."
+
+            strTemp = strRoot & strAppDir
+            Dim dInfo As New DirectoryInfo(strTemp)
+            If Not dInfo.Exists Then
+                MkDir(strTemp)
+            End If
+
+            Return strTemp
+        Catch ex As Exception
+           Debug.Print(strRoutine & "|ERROR|" & strtrace & " " & ex.Message & " (" & ex.HResult & ").")
+            Return "C:\Temp"
+        End Try
+
+    End Function
+
+    ''' <summary>
+    ''' Used to return a path to the application's system directory.
+    ''' </summary>
+    ''' <returns>String</returns>
+    ''' <remarks></remarks>
+    Public Shared Function GetApplicationSystemPath(Optional ByVal AppName As String = "") As String
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":GetApplicationSystemPath"
+        Try
+            Dim strTemp As String = String.Empty
+            Dim strSysDir As String = "\System"
+
+            strTemp = GetApplicationRootPath(AppName) & strSysDir
+            strTrace = "Checking for directory: '" & strTemp & "'."
+            Dim dInfo As New DirectoryInfo(strTemp)
+            If Not dInfo.Exists Then
+                strTrace = "Creating Directory: '" & strTemp & "'."
+                MkDir(strTemp)
+            End If
+
+            Return strTemp
+
+        Catch ex As Exception
+            Dim strPath As String = GetApplicationRootPath()
+            Debug.Print(strRoutine & "|ERROR|" & strTrace & " " & ex.Message & " (" & ex.HResult & ").")
+            Return strPath
+        End Try
+
+    End Function
+
+#End Region
 
 #End Region
 
@@ -1999,8 +2290,19 @@ Public Class Client
         ''' <returns>String:</returns>
         ''' <remarks></remarks>
         Public Function GetStorageString() As String
-            Dim strJson As String = JsonConvert.SerializeObject(Me)
-            Return strJson
+
+            Dim strTrace As String = "General Fault."
+            Dim strRoutine As String = _rootClass & ":GetStorageString"
+            Dim strDefault As String = "Method failed."
+            Try
+                Dim strJson As String = JsonConvert.SerializeObject(Me)
+
+                Return strJson
+            Catch ex As Exception
+                Client.LogError(strTrace, ex, strRoutine)
+                Return String.Empty
+            End Try
+
         End Function
 
         ''' <summary>
@@ -2011,12 +2313,24 @@ Public Class Client
         ''' <remarks></remarks>
         Public Sub RestoreFromStorageString(ByVal strJson As String)
 
-            Dim myToken As New oAuthAccessToken
-            myToken = JsonConvert.DeserializeObject(strJson, Me.GetType)
+            Dim strTrace As String = "General Fault."
+            Dim strRoutine As String = _rootClass & ":RestoreFromStorageString"
+            Dim strDefault As String = "Method failed."
+            Try
+                If String.IsNullOrEmpty(strJson) Then
+                    strTrace = "A null Json string encountered."
+                    Throw New Exception(strDefault)
+                End If
 
-            Me.Token = myToken.Token
-            Me.Issued = myToken.Issued
-            Me.Expires = myToken.Expires
+                Dim myToken As New oAuthAccessToken
+                myToken = JsonConvert.DeserializeObject(strJson, Me.GetType)
+
+                Me.Token = myToken.Token
+                Me.Issued = myToken.Issued
+                Me.Expires = myToken.Expires
+            Catch ex As Exception
+                Client.LogError(strTrace, ex, strRoutine)
+            End Try
 
         End Sub
 
@@ -2121,6 +2435,19 @@ Public Class Client
         Dim _errorMessage As String = String.Empty
 
         ''' <summary>
+        ''' Returns the last Try/Catch exception
+        ''' </summary>
+        ''' <value></value>
+        ''' <returns>System.Exception:</returns>
+        ''' <remarks></remarks>
+        Public ReadOnly Property Exception As Exception
+            Get
+                Return _exception
+            End Get
+        End Property
+        Dim _exception As Exception = Nothing
+
+        ''' <summary>
         ''' Collection of the cookies resulting from the last
         ''' web request.
         ''' </summary>
@@ -2176,71 +2503,172 @@ Public Class Client
 
 #Region "Asynchronous Methods"
 
+        ''' <summary>
+        ''' Makes an API request Asychronously
+        ''' </summary>
+        ''' <param name="method">String: e.g. GET etc.</param>
+        ''' <param name="resource">String: Resource to retrieve</param>
+        ''' <param name="Params">Dictionary(Of String, Object): Query string parameters</param>
+        ''' <returns>String:</returns>
+        ''' <remarks></remarks>
         Public Async Function APIRequestAsync(ByVal method As String, _
                                     ByVal resource As String, _
                                     ByVal Params As Dictionary(Of String, Object)) As Task(Of String)
 
-            Dim sb As New StringBuilder
-            For Each kvp As KeyValuePair(Of String, Object) In Params
-                sb.Append(kvp.Key & "=" & kvp.Value.ToString & "&")
-            Next
+            Dim strTrace As String = "General Fault."
+            Dim strRoutine As String = _rootClass & ":APIRequestAsync_1"
+            Dim strDefault As String = "Method failed."
+            Try
+                Dim sb As New StringBuilder
+                For Each kvp As KeyValuePair(Of String, Object) In Params
+                    sb.Append(kvp.Key & "=" & kvp.Value.ToString & "&")
+                Next
 
-            Dim query As String = sb.ToString.Substring(0, sb.ToString.Length - 1)
+                Dim query As String = sb.ToString.Substring(0, sb.ToString.Length - 1)
 
-            Dim strReturn As String = Await APIWebRequestAsync(method, resource & "?" & query, "")
-            Return strReturn
+                Dim strReturn As String = Await APIWebRequestAsync(method, resource & "?" & query, "")
+
+                Return strReturn
+            Catch ex As Exception
+                Client.LogError(strTrace, ex, strRoutine)
+                Return String.Empty
+            End Try
 
         End Function
 
+        ''' <summary>
+        ''' Makes an API request Asynchrously
+        ''' </summary>
+        ''' <param name="method">String: e.g. GET, PUT, etc.</param>
+        ''' <param name="resource">String: Resource to retrieve</param>
+        ''' <returns>String:</returns>
+        ''' <remarks>Used when no query string or POST data is required</remarks>
         Public Async Function APIRequestAsync(ByVal method As String, _
                                                 ByVal resource As String) As Task(Of String)
 
-            Dim strReturn As String = Await APIWebRequestAsync(method, resource, "")
-            Return strReturn
+            Dim strTrace As String = "General Fault."
+            Dim strRoutine As String = _rootClass & ":APIRequestAsync_2"
+            Dim strDefault As String = "Method failed."
+            Try
+                Dim strReturn As String = Await APIWebRequestAsync(method, resource, "")
+
+                Return strReturn
+
+            Catch ex As Exception
+                Client.LogError(strTrace, ex, strRoutine)
+                Return String.Empty
+            End Try
+
         End Function
 
+        ''' <summary>
+        ''' Makes an API request Asychronously
+        ''' </summary>
+        ''' <param name="method">String: e.g. POST, PUT</param>
+        ''' <param name="resource">String: Resource to retrieve</param>
+        ''' <param name="postData">String: POST or PUT data</param>
+        ''' <returns>String:</returns>
+        ''' <remarks></remarks>
         Public Async Function APIRequestAsync(ByVal method As String, _
                                                 ByVal resource As String, _
                                                 ByVal postData As String) As Task(Of String)
 
-            Dim strReturn As String = Await APIWebRequestAsync(method, resource, postData)
-            Return strReturn
+            Dim strTrace As String = "General Fault."
+            Dim strRoutine As String = _rootClass & ":APIRequestAsync_3"
+            Dim strDefault As String = "Method failed."
+            Try
+                Dim strReturn As String = Await APIWebRequestAsync(method, resource, postData)
+                Return strReturn
+            Catch ex As Exception
+                Client.LogError(strTrace, ex, strRoutine)
+                Return String.Empty
+            End Try
+
         End Function
 
 #End Region
 
 #Region "Synchronous Methods"
 
+        ''' <summary>
+        ''' Makes an API request
+        ''' </summary>
+        ''' <param name="method">String: e.g. GET etc.</param>
+        ''' <param name="resource">String: Resource to retrieve</param>
+        ''' <param name="Params">Dictionary(Of String, Object): Query string parameters</param>
+        ''' <returns>String:</returns>
+        ''' <remarks></remarks>
         Public Function APIRequest(ByVal method As String, _
                                     ByVal resource As String, _
                                     ByVal Params As Dictionary(Of String, Object)) As String
 
+            Dim strTrace As String = "General Fault."
+            Dim strRoutine As String = _rootClass & ":APIRequest_1"
+            Dim strDefault As String = "Method failed."
+            Try
+                Dim sb As New StringBuilder
+                For Each kvp As KeyValuePair(Of String, Object) In Params
+                    sb.Append(kvp.Key & "=" & kvp.Value.ToString & "&")
+                Next
 
-            Dim sb As New StringBuilder
-            For Each kvp As KeyValuePair(Of String, Object) In Params
-                sb.Append(kvp.Key & "=" & kvp.Value.ToString & "&")
-            Next
+                Dim query As String = sb.ToString.Substring(0, sb.ToString.Length - 1)
 
-            Dim query As String = sb.ToString.Substring(0, sb.ToString.Length - 1)
+                Dim strReturn As String = APIWebRequest(method, resource & "?" & query, "")
 
-            Dim strReturn As String = APIWebRequest(method, resource & "?" & query, "")
-
-            Return strReturn
+                Return strReturn
+            Catch ex As Exception
+                Client.LogError(strTrace, ex, strRoutine)
+                Return String.Empty
+            End Try
 
         End Function
 
+        ''' <summary>
+        ''' Makes an API request 
+        ''' </summary>
+        ''' <param name="method">String: e.g. GET, PUT, etc.</param>
+        ''' <param name="resource">String: Resource to retrieve</param>
+        ''' <returns>String:</returns>
+        ''' <remarks>Used when no query string or POST data is required</remarks>
         Public Function APIRequest(ByVal method As String, _
                           ByVal resource As String) As String
-            Dim strReturn As String = APIWebRequest(method, resource, "")
-            Return strReturn
+
+            Dim strTrace As String = "General Fault."
+            Dim strRoutine As String = _rootClass & ":APIRequest_2"
+            Dim strDefault As String = "Method failed."
+            Try
+                Dim strReturn As String = APIWebRequest(method, resource, "")
+                Return strReturn
+            Catch ex As Exception
+                Client.LogError(strTrace, ex, strRoutine)
+                Return String.Empty
+            End Try
+
         End Function
 
+        ''' <summary>
+        ''' Makes an API request 
+        ''' </summary>
+        ''' <param name="method">String: e.g. POST, PUT</param>
+        ''' <param name="resource">String: Resource to retrieve</param>
+        ''' <param name="postData">String: POST or PUT data</param>
+        ''' <returns>String:</returns>
+        ''' <remarks></remarks>
         Public Function APIRequest(ByVal method As String, _
                                        ByVal resource As String, _
                                        ByVal postData As String) As String
 
-            Dim strReturn As String = APIWebRequest(method, resource, postData)
-            Return strReturn
+            Dim strTrace As String = "General Fault."
+            Dim strRoutine As String = _rootClass & ":APIRequest_3"
+            Dim strDefault As String = "Method failed."
+            Try
+                Dim strReturn As String = APIWebRequest(method, resource, postData)
+                Return strReturn
+            Catch ex As Exception
+                Client.LogError(strTrace, ex, strRoutine)
+                Return String.Empty
+            End Try
+
         End Function
 
 #End Region
@@ -2304,8 +2732,7 @@ Public Class Client
 
                 End Using
             Catch ex As Exception
-                'TraceLogger(strTrace & " " & ex.StackTrace, strRoutine)
-                'ErrorLogger(ex.Message & " " & strTrace, Err.Number, strRoutine)
+                Client.LogError(strTrace, ex, strRoutine)
                 Return Nothing
             End Try
         End Function
@@ -2359,8 +2786,7 @@ Public Class Client
 
                 End Using
             Catch ex As Exception
-                'TraceLogger(strTrace & " " & ex.StackTrace, strRoutine)
-                'ErrorLogger(ex.Message & " " & strTrace, Err.Number, strRoutine)
+                Client.LogError(strTrace, ex, strRoutine)
                 Return Nothing
             End Try
         End Function
@@ -2371,7 +2797,11 @@ Public Class Client
         ''' <remarks>Can force the user to log in versus using
         ''' cached credentials.</remarks>
         Public Sub RemoveCookies()
-            Web.RemoveCookies("Wunderlist")
+            Try
+                Web.RemoveCookies("Wunderlist")
+            Catch ex As Exception
+                Client.LogError("", ex, _rootClass & "RemoveClookies")
+            End Try
         End Sub
 
         ''' <summary>
@@ -2380,7 +2810,11 @@ Public Class Client
         ''' <remarks>Can force the user to log in versus using
         ''' cached credentials.</remarks>
         Public Shared Sub ClearCookies()
-            Web.RemoveCookies("Wunderlist")
+            Try
+                Web.RemoveCookies("Wunderlist")
+            Catch ex As Exception
+                Client.LogError("", ex, _rootClass & "ClearClookies")
+            End Try
         End Sub
 
 #End Region
@@ -2457,16 +2891,16 @@ Public Class Client
 
             Catch webex As Net.WebException
                 strTrace = webex.Message
-                '_errorCode = webex.Status
-                '_errorMessage = webex.Message
-                '_exception = webex
+                ' _errorCode = webex.Status
+                _errorMessage = webex.Message
+                _exception = webex
                 Dim rsp As System.Net.WebResponse = webex.Response
-                '  ErrorLogger(strTrace, webex.Status, strRoutine)
+
+                Client.LogError(strTrace, webex, strRoutine)
                 Return String.Empty
             Catch ex As Exception
-                ' _exception = ex
-                'TraceLogger(strTrace & " " & ex.StackTrace, strRoutine)
-                'ErrorLogger(ex.Message & " " & strTrace, Err.Number, strRoutine)
+                Client.LogError(strTrace, ex, strRoutine)
+                _exception = ex
                 Return String.Empty
             End Try
 
@@ -2544,19 +2978,17 @@ Public Class Client
             Catch webex As Net.WebException
                 '_errorCode = webex.Status
                 _errorMessage = webex.Message
-                '_exception = webex
+                _exception = webex
                 _statusCode = webex.Status
 
                 Dim rsp As System.Net.WebResponse = webex.Response
                 '   TraceLogger(rsp, strRoutine)
                 ' If Not IsNothing(rsp) Then _statusCode = 0
-
-                '     ErrorLogger(webex.Message, webex.Status, strRoutine)
+                Client.LogError(strTrace, webex, strRoutine)
                 Return webex.Message
             Catch ex As Exception
-                '_exception = ex
-                'TraceLogger(strTrace & " " & ex.StackTrace, strRoutine)
-                'ErrorLogger(ex.Message & " " & strTrace, Err.Number, strRoutine)
+                _exception = ex
+                Client.LogError(strTrace, ex, strRoutine)
                 Return ex.Message
             Finally
                 webRequest.GetResponse().GetResponseStream().Close()
@@ -2638,15 +3070,15 @@ Public Class Client
             Catch webex As Net.WebException
                 strTrace = webex.Message
                 '_errorCode = webex.Status
-                '_errorMessage = webex.Message
-                '_exception = webex
+                _errorMessage = webex.Message
+                _exception = webex
                 Dim rsp As System.Net.WebResponse = webex.Response
-                '  ErrorLogger(strTrace, webex.Status, strRoutine)
+
+                Client.LogError(strTrace, webex, strRoutine)
                 Return String.Empty
             Catch ex As Exception
-                ' _exception = ex
-                'TraceLogger(strTrace & " " & ex.StackTrace, strRoutine)
-                'ErrorLogger(ex.Message & " " & strTrace, Err.Number, strRoutine)
+                _exception = ex
+                Client.LogError(strTrace, ex, strRoutine)
                 Return String.Empty
             End Try
 
@@ -2723,19 +3155,18 @@ Public Class Client
             Catch webex As Net.WebException
                 '_errorCode = webex.Status
                 _errorMessage = webex.Message
-                '_exception = webex
+                _exception = webex
                 _statusCode = webex.Status
 
                 Dim rsp As System.Net.WebResponse = webex.Response
 
                 '   TraceLogger(rsp, strRoutine)
 
-                '     ErrorLogger(webex.Message, webex.Status, strRoutine)
+                Client.LogError(strTrace, webex, strRoutine)
                 Return webex.Message
             Catch ex As Exception
-                '_exception = ex
-                'TraceLogger(strTrace & " " & ex.StackTrace, strRoutine)
-                'ErrorLogger(ex.Message & " " & strTrace, Err.Number, strRoutine)
+                _exception = ex
+                Client.LogError(strTrace, ex, strRoutine)
                 Return ex.Message
             Finally
                 webRequest.GetResponse().GetResponseStream().Close()
@@ -2820,7 +3251,7 @@ Public Class Client
                     _Value = ck.Value
                     _Version = ck.Version
                 Catch ex As Exception
-
+                    Client.LogError(strTrace, ex, strRoutine)
                 End Try
             End Sub
 
@@ -2839,8 +3270,6 @@ Public Class Client
 
         Public Class Cookies
             Inherits CollectionBase
-
-
 
 #Region "Fields"
 
@@ -2867,7 +3296,7 @@ Public Class Client
                 Try
                     Me.InnerList.Add(o)
                 Catch ex As Exception
-
+                    Client.LogError("", ex, _rootClass & ":Add")
                 End Try
             End Sub
 
@@ -2875,6 +3304,7 @@ Public Class Client
                 Try
                     Return Me.InnerList(index)
                 Catch ex As Exception
+                    Client.LogError("", ex, _rootClass & ":Item")
                     Return Nothing
                 End Try
             End Function
@@ -2904,16 +3334,12 @@ Public Class Client
 
                     Return retObject
                 Catch ex As Exception
-                    LogErr(strTrace & " " & ex.Message, ex, strRoutine)
+                    Client.LogError(strTrace & " " & ex.Message, ex, strRoutine)
                     Return Nothing
                 End Try
             End Function
 
 #End Region
-
-            Private Sub LogErr(ByVal Message As String, ByVal myEx As Exception, ByVal Method As String)
-                Debug.Print(Method & "|ERROR|" & Message & " " & myEx.Message)
-            End Sub
 
         End Class
 
@@ -3014,7 +3440,7 @@ Public Class ObjectBase
 
             Return strReturn
         Catch ex As Exception
-            Debug.Print(strRoutine & "|ERROR|" & strTrace & " " & ex.Message)
+            Client.LogError(strTrace, ex, strRoutine)
             Return String.Empty
         End Try
     End Function
@@ -3124,7 +3550,7 @@ Public Class ItemDescriptor
             Me.list_id = obj.list_id
 
         Catch ex As Exception
-
+            Client.LogError(strTrace, ex, strRoutine)
         End Try
 
     End Sub
@@ -3146,10 +3572,10 @@ Public Class ItemDescriptor
             Return strReturn
 
         Catch ex As Exception
+            Client.LogError(strTrace, ex, strRoutine)
             Return String.Empty
         End Try
     End Function
-
 
 End Class
 
