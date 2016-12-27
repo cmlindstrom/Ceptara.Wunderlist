@@ -23,6 +23,17 @@ Public Class Client
     ''' <remarks></remarks>
     Dim _appKeys As AppConfig = Nothing
 
+    ''' <summary>
+    ''' The surgical method deletes only the Wunderlist cookies, the
+    ''' sledgeHammer method clears all cookies.
+    ''' </summary>
+    ''' <remarks></remarks>
+    Public Enum enuCacheMethod
+        None = 0
+        Surgical = 1
+        SledgeHammer = 2
+    End Enum
+
 #End Region
 
 #Region "Properties"
@@ -43,6 +54,23 @@ Public Class Client
         End Set
     End Property
     Dim myAccessToken As oAuthAccessToken = Nothing
+
+    ''' <summary>
+    ''' The surgical method deletes only the Wunderlist cookies, the
+    ''' sledgeHammer method clears all cookies.
+    ''' </summary>
+    ''' <value>enuCacheMethod:</value>
+    ''' <returns>enuCacheMethod:</returns>
+    ''' <remarks>.net WebBrowser component uses the IE cache.</remarks>
+    Public Property ClearCacheMethod As enuCacheMethod
+        Get
+            Return _clearCacheMethod
+        End Get
+        Set(value As enuCacheMethod)
+            _clearCacheMethod = value
+        End Set
+    End Property
+    Dim _clearCacheMethod As enuCacheMethod = enuCacheMethod.Surgical
 
     ''' <summary>
     ''' The accessToken returned by the service.
@@ -306,11 +334,17 @@ Public Class Client
         Try
             Dim strResponse As String = _rh.APIRequest("GET", "lists")
 
+            Dim bReturn As Boolean = False
             If String.IsNullOrEmpty(strResponse) Then
-                Return False
+                strTrace = "Failed to validate token via a GET lists request - see error log."
+                bReturn = False
             Else
-                Return True
+                strTrace = "Validated token via a GET lists request."
+                bReturn = True
             End If
+            LogAction("VALTKN", strTrace, strRoutine)
+
+            Return bReturn
         Catch ex As Exception
             LogErr(strTrace, ex, strRoutine)
             Return False
@@ -325,10 +359,20 @@ Public Class Client
     ''' </summary>
     ''' <remarks></remarks>
     Public Sub ForceUserLogin()
-        Dim strTrace As String = String.Empty
+        Dim strTrace As String = "General Fault."
         Dim strRoutine As String = _rootClass & "ForceUserLogin"
         Try
-            RESTHelper.ClearCookies()
+            If _clearCacheMethod = enuCacheMethod.Surgical Then
+                RESTHelper.ClearCookies() ' Logged in RestHelper, # of cookies known there.
+            ElseIf _clearCacheMethod = enuCacheMethod.SledgeHammer Then
+                System.Diagnostics.Process.Start("rundll32.exe", "InetCpl.cpl,ClearMyTracksByProcess 2")
+            Else
+                ' Don't clear the cookies
+            End If
+
+            strTrace = "Cleared the cookies to force user to log in and retrieve a new token."
+            LogAction("CLRTKN", strTrace, strRoutine)
+
         Catch ex As Exception
             LogErr(ex.Message, ex, strRoutine)
         End Try
@@ -1824,6 +1868,8 @@ Public Class Client
                 _rh.AccessToken = token
                 _rh.ResetBaseURL()
                 RaiseEvent Connected(Me, New EventArgs)
+
+                strTrace = "Exchanged Auth token for an Access token: '" & token & "'."
             Else
                 If _rh.StatusCode = 200 Then
                     strTrace = "Failed to retrieve an access token from a successful request."
@@ -1833,7 +1879,10 @@ Public Class Client
                 Throw New Exception(strDefault)
             End If
 
+            LogAction("XCHGTKN", strTrace, strRoutine)
+
         Catch ex As Exception
+            LogAction("XCHGTKN_FAIL", strTrace, strRoutine)
             LogErr(strTrace, ex, strRoutine)
         End Try
 
@@ -1869,8 +1918,9 @@ Public Class Client
 
             Dim bRetVal As Boolean = False
 
-            Dim strProfile As String = "Wunderlist"
-            Dim lFileLen As Long = fInfo.Length
+            Dim strProfile As String = "WunderlistLib"
+            Dim lFileLen As Long = 0
+            If fInfo.Exists Then lFileLen = fInfo.Length
             If lFileLen > _logFileMaxSize Then  ' Delete log file if too large
                 fInfo.Delete()
                 oWriter = New StreamWriter(strFullPath, True)
@@ -1908,7 +1958,7 @@ Public Class Client
         End Try
     End Sub
 
-    Private Sub LogAction(ByVal Action As String, ByVal Message As String, ByVal Method As String)
+    Public Shared Sub LogAction(ByVal Action As String, ByVal Message As String, ByVal Method As String)
         Try
             Debug.Print(Method & "|" & Action & "|" & Message)
 
@@ -1925,10 +1975,11 @@ Public Class Client
 
             Dim bRetVal As Boolean = False
 
-            Dim strProfile As String = "Wunderlist"
+            Dim strProfile As String = "WunderlistLib"
             Dim Version As String = My.Application.Info.Version.ToString
 
-            Dim lFileLen As Long = fInfo.Length
+            Dim lFileLen As Long = 0
+            If fInfo.Exists Then lFileLen = fInfo.Length
             If lFileLen > _logFileMaxSize Then  ' Delete log file if too large
                 fInfo.Delete()
                 oWriter = New StreamWriter(strFullPath, True)
@@ -1946,7 +1997,7 @@ Public Class Client
             oWriter.Close()
 
         Catch ex As Exception
-
+            Debug.Print(Method & "|ERROR|" & Message & " " & ex.Message & " (" & ex.HResult & ").")
         End Try
     End Sub
 
@@ -2798,7 +2849,7 @@ Public Class Client
         ''' cached credentials.</remarks>
         Public Sub RemoveCookies()
             Try
-                Web.RemoveCookies("Wunderlist")
+                ClearCookies()
             Catch ex As Exception
                 Client.LogError("", ex, _rootClass & "RemoveClookies")
             End Try
@@ -2810,11 +2861,20 @@ Public Class Client
         ''' <remarks>Can force the user to log in versus using
         ''' cached credentials.</remarks>
         Public Shared Sub ClearCookies()
+
+            Dim strTrace As String = "General Fault."
+            Dim strRoutine As String = _rootClass & ":ClearCookies"
+            Dim strDefault As String = "Method failed."
             Try
-                Web.RemoveCookies("Wunderlist")
+                Dim iCnt As Integer = Web.RemoveCookies("Wunderlist")
+
+                strTrace = "Removed " & iCnt.ToString & " cookies for the Wunderlist Client from the INetCache."
+                Client.LogAction("REMCKI", strTrace, strRoutine)
+
             Catch ex As Exception
-                Client.LogError("", ex, _rootClass & "ClearClookies")
+             Client.LogError("", ex, _rootClass & "ClearClookies")
             End Try
+
         End Sub
 
 #End Region

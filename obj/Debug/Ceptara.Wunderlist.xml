@@ -12,6 +12,12 @@ Ceptara.Wunderlist
  web client
  </summary>
 	<remarks></remarks>
+</member><member name="T:Ceptara.Wunderlist.Client.enuCacheMethod">
+	<summary>
+ The surgical method deletes only the Wunderlist cookies, the
+ sledgeHammer method clears all cookies.
+ </summary>
+	<remarks></remarks>
 </member><member name="P:Ceptara.Wunderlist.Client.AccessToken">
 	<summary>
  The oAuthAccessToken including the accessToken string and the
@@ -20,6 +26,14 @@ Ceptara.Wunderlist
 	<value>Wunderlist.Client.oAuthAccessToken:</value>
 	<returns>Wunderlist.Client.oAuthAccessToken:</returns>
 	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.Client.ClearCacheMethod">
+	<summary>
+ The surgical method deletes only the Wunderlist cookies, the
+ sledgeHammer method clears all cookies.
+ </summary>
+	<value>enuCacheMethod:</value>
+	<returns>enuCacheMethod:</returns>
+	<remarks>.net WebBrowser component uses the IE cache.</remarks>
 </member><member name="P:Ceptara.Wunderlist.Client.AccessTokenStored">
 	<summary>
  The accessToken returned by the service.
