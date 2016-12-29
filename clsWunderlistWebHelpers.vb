@@ -341,3 +341,58 @@ SkipOut:
 
 End Class
 
+Public NotInheritable Class WebHelper
+
+    ' Adopted from here:
+    ' http://stackoverflow.com/questions/912741/how-to-delete-cookies-from-windows-form
+
+    Private Const _rootClass As String = "Wunderlist.Web"
+
+    Private Sub New()
+    End Sub
+
+    Public Shared Function SupressCookiePersist() As Boolean
+        ' 3 = INTERNET_SUPPRESS_COOKIE_PERSIST 
+        ' 81 = INTERNET_OPTION_SUPPRESS_BEHAVIOR
+        Return SetOption(81, 3)
+    End Function
+
+    Public Shared Function EndBrowserSession() As Boolean
+        ' 42 = INTERNET_OPTION_END_BROWSER_SESSION 
+        Return SetOption(42, Nothing)
+    End Function
+
+    Private Shared Function SetOption(settingCode As Integer, [option] As System.Nullable(Of Integer)) As Boolean
+
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":SetOption"
+        Dim strDefault As String = "Method failed."
+        Try
+            Dim optionPtr As IntPtr = IntPtr.Zero
+            Dim size As Integer = 0
+            If [option].HasValue Then
+                size = 4
+                optionPtr = Marshal.AllocCoTaskMem(size)
+                Marshal.WriteInt32(optionPtr, [option].Value)
+            End If
+
+            Dim success As Boolean = InternetSetOption(0, settingCode, optionPtr, size)
+
+            If optionPtr <> IntPtr.Zero Then
+                Marshal.Release(optionPtr)
+            End If
+            Return success
+        Catch ex As Exception
+            Client.LogError(strTrace, ex, strRoutine)
+            Return False
+        End Try
+
+    End Function
+
+    <DllImport("wininet.dll", CharSet:=CharSet.Auto, SetLastError:=True)> _
+    Private Shared Function InternetSetOption(hInternet As Integer, dwOption As Integer, lpBuffer As IntPtr, dwBufferLength As Integer) As Boolean
+    End Function
+
+End Class
+
+

@@ -28,12 +28,15 @@ Ceptara.Wunderlist
 	<remarks></remarks>
 </member><member name="P:Ceptara.Wunderlist.Client.ClearCacheMethod">
 	<summary>
- The surgical method deletes only the Wunderlist cookies, the
- sledgeHammer method clears all cookies.
+ Gets/Sets the method used to manage the cookie cache.
  </summary>
 	<value>enuCacheMethod:</value>
 	<returns>enuCacheMethod:</returns>
-	<remarks>.net WebBrowser component uses the IE cache.</remarks>
+	<remarks>.net WebBrowser component uses the IE cache.
+ The surgical method deletes only the Wunderlist cookies, the
+ sledgeHammer method clears all cookies and the proactive method
+ avoids using cookies all together.
+ </remarks>
 </member><member name="P:Ceptara.Wunderlist.Client.AccessTokenStored">
 	<summary>
  The accessToken returned by the service.
@@ -107,6 +110,12 @@ Ceptara.Wunderlist
  to force the user to enter his/her Wunderlist
  credentials
  </summary>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.ClearCache(Ceptara.Wunderlist.Client.enuCacheMethod)">
+	<summary>
+ Clears the cookie cache
+ </summary>
+	<param name="Method">enuCacheMethod:</param>
 	<remarks></remarks>
 </member><member name="M:Ceptara.Wunderlist.Client.GetMyUser">
 	<summary>
@@ -195,6 +204,45 @@ Ceptara.Wunderlist
 	<param name="Revision">Long: Revision of the task</param>
 	<returns>Boolean: Returns True if successful</returns>
 	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetTaskNotes(System.String)">
+	<summary>
+ Retrieves the notes for the specified task.
+ </summary>
+	<param name="TaskId">String: Task Identifier</param>
+	<returns>List(Of Note):</returns>
+	<remarks>API v1 supports only one note per task</remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetNote(System.String)">
+	<summary>
+ Retrieves the specified note from the service.
+ </summary>
+	<param name="NoteId">String: note identifier</param>
+	<returns>Wunderlist.Note:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.NewTaskNote(System.String,Ceptara.Wunderlist.Note)">
+	<summary>
+ Adds a new note to the specified task
+ </summary>
+	<param name="TaskId">String: task identifier</param>
+	<param name="newNote">Wunderlist.Note:</param>
+	<returns>Wunderlist.Note:</returns>
+	<remarks>API v1 supports only one note per task - returns 422 when
+ trying to add more than one note.</remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.UpdateNote(Ceptara.Wunderlist.Note)">
+	<summary>
+ Updates an existing note using the properties specified
+ in the updNote parameter
+ </summary>
+	<param name="updNote">Wunderlist.Note:</param>
+	<returns>Wunderlist.Note:</returns>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RemoveNote(System.String,System.Int64)">
+	<summary>
+ Removes the specified note from the service
+ </summary>
+	<param name="NoteId">String: Unique id for the note</param>
+	<param name="Revision">Long: Revision of the note</param>
+	<returns>Boolean: Returns True if successful</returns>
+	<remarks></remarks>
 </member><member name="M:Ceptara.Wunderlist.Client.GetMyUserAsync">
 	<summary>
  Retrieve the currently logged in user's profile information off
@@ -270,6 +318,39 @@ Ceptara.Wunderlist
 	<param name="TaskId">String: Uniqued id for the task</param>
 	<param name="Revision">Long: Revision of the task</param>
 	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetTaskNotesAsync(System.String)">
+	<summary>
+ Retrieves the notes for the specified task.
+ </summary>
+	<param name="TaskId">String: Task Identifier</param>
+	<remarks></remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.GetNoteAsync(System.String)">
+	<summary>
+ Retrieves the specified note from the service asynchronously.
+ </summary>
+	<param name="NoteId">String: note identifier</param>
+	<remarks>Raises ItemUpdated when completed.</remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.NewTaskNoteAsync(System.String,Ceptara.Wunderlist.Note)">
+	<summary>
+ Adds a new note to the specified task
+ </summary>
+	<param name="TaskId">String: task identifier</param>
+	<param name="newNote">Wunderlist.Note:</param>
+	<remarks>Raises ItemAdded when complete.</remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.UpdateNoteAsync(Ceptara.Wunderlist.Note)">
+	<summary>
+ Updates an existing note using the properties specified
+ in the updNote parameter asynchronously
+ </summary>
+	<param name="updNote">Wunderlist.Note:</param>
+	<remarks>Raises ItemUpdated when completed.</remarks>
+</member><member name="M:Ceptara.Wunderlist.Client.RemoveNoteAsync(System.String,System.Int64)">
+	<summary>
+ Removes the specified note from the service
+ </summary>
+	<param name="NoteId">String: Unique id for the note</param>
+	<param name="Revision">Long: Revision of the note</param>
+	<remarks>Raises ItemDeleted when completed.</remarks>
 </member><member name="M:Ceptara.Wunderlist.Client.CleanFileName(System.String,System.String)">
 	<summary>
   This function is used to remove any offending File OS characters that can cause an error in renaming a file, i.e.
@@ -561,6 +642,13 @@ Ceptara.Wunderlist
 	<value></value>
 	<returns></returns>
 	<remarks></remarks>
+</member><member name="P:Ceptara.Wunderlist.Task.note">
+	<summary>
+ Not part of API - put here to support note management
+ </summary>
+	<value></value>
+	<returns></returns>
+	<remarks>Call GetTask and then GetTaskNotes for that task.</remarks>
 </member><member name="M:Ceptara.Wunderlist.ItemDescriptor.ToStringJson">
 	<summary>
  Creates a Json formatted string of the object instance.

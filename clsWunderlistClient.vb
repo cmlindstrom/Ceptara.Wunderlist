@@ -32,6 +32,7 @@ Public Class Client
         None = 0
         Surgical = 1
         SledgeHammer = 2
+        Proactive = 3
     End Enum
 
 #End Region
@@ -56,12 +57,15 @@ Public Class Client
     Dim myAccessToken As oAuthAccessToken = Nothing
 
     ''' <summary>
-    ''' The surgical method deletes only the Wunderlist cookies, the
-    ''' sledgeHammer method clears all cookies.
+    ''' Gets/Sets the method used to manage the cookie cache.
     ''' </summary>
     ''' <value>enuCacheMethod:</value>
     ''' <returns>enuCacheMethod:</returns>
-    ''' <remarks>.net WebBrowser component uses the IE cache.</remarks>
+    ''' <remarks>.net WebBrowser component uses the IE cache.
+    ''' The surgical method deletes only the Wunderlist cookies, the
+    ''' sledgeHammer method clears all cookies and the proactive method
+    ''' avoids using cookies all together.
+    ''' </remarks>
     Public Property ClearCacheMethod As enuCacheMethod
         Get
             Return _clearCacheMethod
@@ -70,7 +74,7 @@ Public Class Client
             _clearCacheMethod = value
         End Set
     End Property
-    Dim _clearCacheMethod As enuCacheMethod = enuCacheMethod.Surgical
+    Dim _clearCacheMethod As enuCacheMethod = enuCacheMethod.Proactive
 
     ''' <summary>
     ''' The accessToken returned by the service.
@@ -138,6 +142,9 @@ Public Class Client
         Dim strTrace As String = "General Fault."
         Dim strRoutine As String = _rootClass & ":frmAuthorizationForm_FormClosing"
         Try
+            strTrace = "Resets the browser to its default cookie behavior."
+            If _clearCacheMethod = enuCacheMethod.Proactive Then WebHelper.EndBrowserSession()
+
             wb_OAuth.Dispose()
             wb_OAuth = Nothing
         Catch ex As Exception
@@ -183,6 +190,10 @@ Public Class Client
 
                 ' Close the request form
                 frmAuthorizationForm.Close()
+
+                Dim strCacheMethod As String = [Enum].GetName(GetType(enuCacheMethod), _clearCacheMethod)
+                strTrace = "Connected to the service - cache mode: " & strCacheMethod & "."
+                LogAction("CONNECT", strTrace, strRoutine)
 
                 ' Capture the authToken so that an accessToken can be retrieved.
                 Dim code As String = GetKeyValueFromString(myURI.Query, "code")
@@ -362,16 +373,42 @@ Public Class Client
         Dim strTrace As String = "General Fault."
         Dim strRoutine As String = _rootClass & "ForceUserLogin"
         Try
-            If _clearCacheMethod = enuCacheMethod.Surgical Then
-                RESTHelper.ClearCookies() ' Logged in RestHelper, # of cookies known there.
-            ElseIf _clearCacheMethod = enuCacheMethod.SledgeHammer Then
-                System.Diagnostics.Process.Start("rundll32.exe", "InetCpl.cpl,ClearMyTracksByProcess 2")
-            Else
-                ' Don't clear the cookies
-            End If
+
+            ClearCache(_clearCacheMethod)
 
             strTrace = "Cleared the cookies to force user to log in and retrieve a new token."
             LogAction("CLRTKN", strTrace, strRoutine)
+
+        Catch ex As Exception
+            LogErr(ex.Message, ex, strRoutine)
+        End Try
+
+    End Sub
+
+    ''' <summary>
+    ''' Clears the cookie cache
+    ''' </summary>
+    ''' <param name="Method">enuCacheMethod:</param>
+    ''' <remarks></remarks>
+    Public Sub ClearCache(ByVal Method As enuCacheMethod)
+
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":ClearCache"
+        Dim strDefault As String = "Method failed."
+        Try
+            If Method = enuCacheMethod.Surgical Then
+                strTrace = "Clearing only the Wunderlist cookies."
+                RESTHelper.ClearCookies() ' Logged in RestHelper, # of cookies known there.
+            ElseIf Method = enuCacheMethod.SledgeHammer Then
+                strTrace = "Clearing all cookies in INetCache."
+                System.Diagnostics.Process.Start("rundll32.exe", "InetCpl.cpl,ClearMyTracksByProcess 2")
+            ElseIf Method = enuCacheMethod.Proactive Then
+                strTrace = "Cache should already be cleared - ignoring this call."
+            Else
+                strTrace = "Unrecognized CacheMethod - ignoring this call."
+            End If
+
+            LogAction("CLRCK$$", strTrace, strRoutine)
 
         Catch ex As Exception
             LogErr(ex.Message, ex, strRoutine)
@@ -923,7 +960,7 @@ Public Class Client
             strTrace = "Make the request."
             Dim strResponse As String = _rh.APIRequest("POST", "tasks", strPost)
             If String.IsNullOrEmpty(strResponse) Then
-                strTrace = "Failed to create a new list" & _
+                strTrace = "Failed to create a new task" & _
                                 " - HTTP status code: " & _rh.StatusCode & ", service msg: " & _
                                 _rh.ErrorMessage
                 Throw New Exception(strDefault)
@@ -996,7 +1033,7 @@ Public Class Client
             strTrace = "Make the request."
             Dim strResponse As String = _rh.APIRequest("PATCH", "tasks/" & updTask.ID, strPost)
             If String.IsNullOrEmpty(strResponse) Then
-                strTrace = "Failed to update the user's list " & _
+                strTrace = "Failed to update the user's task " & _
                                 " - HTTP status code: " & _rh.StatusCode & ", service msg: " & _
                                 _rh.ErrorMessage
 
@@ -1040,7 +1077,7 @@ Public Class Client
         Dim strDefault As String = "Method failed."
         Try
             If String.IsNullOrEmpty(TaskId) Then
-                strTrace = "No list was identified."
+                strTrace = "No task was identified."
                 Throw New Exception(strDefault)
             End If
             If Revision <= 0 Then
@@ -1079,6 +1116,343 @@ Public Class Client
             LogErr(strTrace, ex, strRoutine)
             Return False
         End Try
+
+    End Function
+
+    ' --- Note Management
+
+    ''' <summary>
+    ''' Retrieves the notes for the specified task.
+    ''' </summary>
+    ''' <param name="TaskId">String: Task Identifier</param>
+    ''' <returns>List(Of Note):</returns>
+    ''' <remarks>API v1 supports only one note per task</remarks>
+    Public Function GetTaskNotes(ByVal TaskId As String) As List(Of Note)
+
+        ' GET a.wunderlist.com/api/v1/notes?list_id=nn, Response = 200
+        '                       OR
+        ' GET a.wunderlist.com/api/v1/notes?task_id=nn, Response = 200
+        '
+        ' Response Body
+        ' [
+        '  {
+        '    "id": 1,
+        '    "task_id": 1234,
+        '    "content": "Hey there",
+        '    "created_at": "2013-08-30T08:36:13.273Z",
+        '    "updated_at": "2013-08-30T08:36:13.273Z",
+        '    "revision": 999
+        '  }
+        ' ]
+
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":GetTaskNotes"
+        Dim strDefault As String = "Method failed."
+        Try
+            If String.IsNullOrEmpty(TaskId) Then
+                strTrace = "A task identifier is required."
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Construct the query string."
+            Dim query As New Dictionary(Of String, Object)
+            query.Add("task_id", TaskId)
+
+            strTrace = "Make the request."
+            Dim strResponse As String = _rh.APIRequest("GET", "notes", query)
+            If String.IsNullOrEmpty(strResponse) Then
+                strTrace = "Failed to retrieve a task's notes from task id: " & TaskId & _
+                                " - HTTP status code: " & _rh.StatusCode & ", service msg: " & _
+                                _rh.ErrorMessage
+
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Process the response."
+            Dim myNotes As New List(Of Note)
+            myNotes = Newtonsoft.Json.JsonConvert.DeserializeObject(strResponse, myNotes.GetType)
+
+            strTrace = "Inform listeners."
+            Dim cev As New CollectionEventArgs(myNotes)
+            RaiseEvent CollectionUpdated(Me, cev)
+
+            ' Log Action
+            strTrace = "Retrieved " & myNotes.Count.ToString & " notes."
+            LogAction("GNTESCOLL", strTrace, strRoutine)
+
+            Return myNotes
+
+        Catch ex As Exception
+            LogAction("GNTESCOLL_FAIL", strTrace & " " & ex.Message, strRoutine)
+            LogErr(strTrace, ex, strRoutine)
+            Return Nothing
+        End Try
+
+    End Function
+
+    ''' <summary>
+    ''' Retrieves the specified note from the service.
+    ''' </summary>
+    ''' <param name="NoteId">String: note identifier</param>
+    ''' <returns>Wunderlist.Note:</returns>
+    ''' <remarks></remarks>
+    Public Function GetNote(ByVal NoteId As String) As Note
+
+        ' GET a.wunderlist.com/api/v1/notes/:id, Response = 200
+        '
+        ' Response Body
+        ' {
+        '  "id": 1,
+        '  "task_id": 1234,
+        '  "content": "Hey there",
+        '  "created_at": "2013-08-30T08:36:13.273Z",
+        '  "updated_at": "2013-08-30T08:36:13.273Z",
+        '  "revision": 999
+        ' }
+
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":GetNote"
+        Dim strDefault As String = "Method failed."
+        Try
+            If String.IsNullOrEmpty(NoteId) Then
+                strTrace = "Invalid note identifier"
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Make the request."
+            Dim strResponse As String = _rh.APIRequest("GET", "notes/" & NoteId)
+            If String.IsNullOrEmpty(strResponse) Then
+                strTrace = "Failed to retrieve the specified note, id: " & NoteId & _
+                                " - HTTP status code: " & _rh.StatusCode & ", service msg: " & _
+                                _rh.ErrorMessage
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Process the response."
+            Dim myNote As New Note
+            myNote = Newtonsoft.Json.JsonConvert.DeserializeObject(strResponse, myNote.GetType)
+
+            strTrace = "Inform listeners."
+            RaiseEvent ItemUpdated(Me, New ItemEventArgs(myNote, ItemEventArgs.enuAction.None))
+
+            ' Log Action
+            strTrace = "Retrieved note: " & myNote.ID & "."
+            LogAction("GNTE", strTrace, strRoutine)
+
+            Return myNote
+
+        Catch ex As Exception
+            LogAction("GNTE_FAIL", strTrace & " " & ex.Message, strRoutine)
+            LogErr(strTrace, ex, strRoutine)
+            Return Nothing
+        End Try
+
+    End Function
+
+    ''' <summary>
+    ''' Adds a new note to the specified task
+    ''' </summary>
+    ''' <param name="TaskId">String: task identifier</param>
+    ''' <param name="newNote">Wunderlist.Note:</param>
+    ''' <returns>Wunderlist.Note:</returns>
+    ''' <remarks>API v1 supports only one note per task - returns 422 when
+    ''' trying to add more than one note.</remarks>
+    Public Function NewTaskNote(ByVal TaskId As String, ByVal newNote As Note) As Note
+
+        ' POST a.wunderlist.com/api/v1/notes, Response = 201
+        ' Request Body
+        '   {
+        '       "task_id": 1234,
+        '       "content": "Hey there"
+        '   }
+        '
+        ' Response Body
+        ' {
+        '  "id": 1,
+        '  "task_id": 1234,
+        '  "content": "Hey there",
+        '  "created_at": "2013-08-30T08:36:13.273Z",
+        '  "updated_at": "2013-08-30T08:36:13.273Z",
+        '  "revision": 999
+        ' }
+
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":NewTaskNote"
+        Dim strDefault As String = "Method failed."
+        Try
+            If String.IsNullOrEmpty(TaskId) Then
+                strTrace = "No task identifier specified."
+                Throw New Exception(strDefault)
+            End If
+            If IsNothing(newNote) Then
+                strTrace = "A null note is not allowed."
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Prepare the request body."
+            Dim sb As New StringBuilder
+            sb.Append("{")
+            sb.Append("""task_id"":" & TaskId & ",")
+            sb.Append("""content"":""" & newNote.content & """")
+            sb.Append("}")
+            Dim strPost As String = sb.ToString
+
+            strTrace = "Make the request."
+            Dim strResponse As String = _rh.APIRequest("POST", "notes", strPost)
+            If String.IsNullOrEmpty(strResponse) Then
+                strTrace = "Failed to create a new note" & _
+                                " - HTTP status code: " & _rh.StatusCode & ", service msg: " & _
+                                _rh.ErrorMessage
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Process the response."
+            Dim myNote As New Note
+            myNote = Newtonsoft.Json.JsonConvert.DeserializeObject(strResponse, myNote.GetType)
+
+            strTrace = "Inform listeners."
+            RaiseEvent ItemAdded(Me, New ItemEventArgs(myNote, ItemEventArgs.enuAction.Insert))
+
+            ' Log Action
+            strTrace = "Inserted new note: " & myNote.ID & "."
+            LogAction("ADDNTE", strTrace, strRoutine)
+
+            Return myNote
+
+        Catch ex As Exception
+            LogAction("ADDNTE_FAIL", strTrace & " " & ex.Message, strRoutine)
+            LogErr(strTrace, ex, strRoutine)
+            Return Nothing
+        End Try
+
+
+    End Function
+
+    ''' <summary>
+    ''' Updates an existing note using the properties specified
+    ''' in the updNote parameter
+    ''' </summary>
+    ''' <param name="updNote">Wunderlist.Note:</param>
+    ''' <returns>Wunderlist.Note:</returns>
+    ''' <remarks></remarks>
+    Public Function UpdateNote(ByVal updNote As Note) As Note
+
+        ' PATCH a.wunderlist.com/api/v1/notes/:id, Response = 200
+        ' Request Body
+        ' {
+        '  "revision": 999,
+        '  "content": "Hallo",
+        ' }
+        '
+        ' Response Body
+        ' {
+        '  "id": 1,
+        '  "task_id": 1234,
+        '  "content": "Hey there",
+        '  "created_at": "2013-08-30T08:36:13.273Z",
+        '  "updated_at": "2013-08-30T08:36:13.273Z",
+        '  "revision": 1000
+        ' }
+
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":UpdateNote"
+        Dim strDefault As String = "Method failed."
+        Try
+            If IsNothing(updNote) Then
+                strTrace = "A task is required."
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Construct the updated properties Json."
+            Dim strPost As String = updNote.ToStringJson
+
+            strTrace = "Make the request."
+            Dim strResponse As String = _rh.APIRequest("PATCH", "notes/" & updNote.ID, strPost)
+            If String.IsNullOrEmpty(strResponse) Then
+                strTrace = "Failed to update the user's note " & _
+                                " - HTTP status code: " & _rh.StatusCode & ", service msg: " & _
+                                _rh.ErrorMessage
+
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Process the response,"
+            Dim myNote As New Note
+            myNote = Newtonsoft.Json.JsonConvert.DeserializeObject(strResponse, myNote.GetType)
+
+            strTrace = "Inform listeners."
+            RaiseEvent ItemUpdated(Me, New ItemEventArgs(myNote, ItemEventArgs.enuAction.Update))
+
+            ' Log Action
+            strTrace = "Updated note: " & myNote.ID & "."
+            LogAction("UPDNTE", strTrace, strRoutine)
+
+            Return myNote
+
+        Catch ex As Exception
+            LogAction("UPDNTE_FAIL", strTrace & " " & ex.Message, strRoutine)
+            LogErr(strTrace, ex, strRoutine)
+            Return Nothing
+        End Try
+
+    End Function
+
+    ''' <summary>
+    ''' Removes the specified note from the service
+    ''' </summary>
+    ''' <param name="NoteId">String: Unique id for the note</param>
+    ''' <param name="Revision">Long: Revision of the note</param>
+    ''' <returns>Boolean: Returns True if successful</returns>
+    ''' <remarks></remarks>
+    Public Function RemoveNote(ByVal NoteId As String, ByVal Revision As Long) As Boolean
+
+        ' DELETE a.wunderlist.com/api/v1/notes/:id&revision=nn, Response = 204
+        '
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":RemoveNote"
+        Dim strDefault As String = "Method failed."
+        Try
+            If String.IsNullOrEmpty(NoteId) Then
+                strTrace = "No note was identified."
+                Throw New Exception(strDefault)
+            End If
+            If Revision <= 0 Then
+                strTrace = "Invalid revision."
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Construct the query string."
+            Dim query As New Dictionary(Of String, Object)
+            query.Add("revision", Revision)
+
+            ' returns an empty response and status code = 204 when successful
+            strTrace = "Make the request"
+            Dim strResponse As String = _rh.APIRequest("DELETE", "notes/" & NoteId, query)
+            If _rh.StatusCode <> 204 Then
+                strTrace = "Failed to delete the specified note '" & NoteId & _
+                                " - HTTP status code: " & _rh.StatusCode & ", service msg: " & _
+                                _rh.ErrorMessage
+
+                Throw New Exception(strDefault)
+            Else
+                strTrace = "Successfully removed note, id:" & NoteId & "."
+            End If
+
+            ' Inform listeners
+            Dim myDesc As New ObjectDescriptor(enuObjectClass.Note, NoteId)
+            RaiseEvent ItemDeleted(Me, New ItemEventArgs(myDesc, ItemEventArgs.enuAction.Delete))
+
+            ' Log Action
+            LogAction("DELNTE", strTrace, strRoutine)
+
+            Return True
+
+        Catch ex As Exception
+            LogAction("DELNTE_FAIL", strTrace & " " & ex.Message, strRoutine)
+            LogErr(strTrace, ex, strRoutine)
+            Return False
+        End Try
+
 
     End Function
 
@@ -1735,6 +2109,321 @@ Public Class Client
 
     End Sub
 
+    ' --- Note Management
+
+    ''' <summary>
+    ''' Retrieves the notes for the specified task.
+    ''' </summary>
+    ''' <param name="TaskId">String: Task Identifier</param>
+    ''' <remarks></remarks>
+    Public Async Sub GetTaskNotesAsync(ByVal TaskId As String)
+
+        ' GET a.wunderlist.com/api/v1/notes?list_id=nn, Response = 200
+        '                       OR
+        ' GET a.wunderlist.com/api/v1/notes?task_id=nn, Response = 200
+        '
+        ' Response Body
+        ' [
+        '  {
+        '    "id": 1,
+        '    "task_id": 1234,
+        '    "content": "Hey there",
+        '    "created_at": "2013-08-30T08:36:13.273Z",
+        '    "updated_at": "2013-08-30T08:36:13.273Z",
+        '    "revision": 999
+        '  }
+        ' ]
+
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":GetTaskNotesAsync"
+        Dim strDefault As String = "Method failed."
+        Try
+            If String.IsNullOrEmpty(TaskId) Then
+                strTrace = "A task identifier is required."
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Construct the query string."
+            Dim query As New Dictionary(Of String, Object)
+            query.Add("task_id", TaskId)
+
+            strTrace = "Make the request."
+            Dim strResponse As String = Await _rh.APIRequestAsync("GET", "notes", query)
+            If String.IsNullOrEmpty(strResponse) Then
+                strTrace = "Failed to retrieve a task's notes from task id: " & TaskId & _
+                                " - HTTP status code: " & _rh.StatusCode & ", service msg: " & _
+                                _rh.ErrorMessage
+
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Process the response."
+            Dim myNotes As New List(Of Note)
+            myNotes = Newtonsoft.Json.JsonConvert.DeserializeObject(strResponse, myNotes.GetType)
+
+            strTrace = "Inform listeners."
+            Dim cev As New CollectionEventArgs(myNotes)
+            RaiseEvent CollectionUpdated(Me, cev)
+
+            ' Log Action
+            strTrace = "Retrieved " & myNotes.Count.ToString & " notes."
+            LogAction("GNTESCOLL", strTrace, strRoutine)
+
+        Catch ex As Exception
+            LogAction("GNTESCOLL_FAIL", strTrace & " " & ex.Message, strRoutine)
+            LogErr(strTrace, ex, strRoutine)
+        End Try
+
+    End Sub
+
+    ''' <summary>
+    ''' Retrieves the specified note from the service asynchronously.
+    ''' </summary>
+    ''' <param name="NoteId">String: note identifier</param>
+    ''' <remarks>Raises ItemUpdated when completed.</remarks>
+    Public Async Sub GetNoteAsync(ByVal NoteId As String)
+
+        ' GET a.wunderlist.com/api/v1/notes/:id, Response = 200
+        '
+        ' Response Body
+        ' {
+        '  "id": 1,
+        '  "task_id": 1234,
+        '  "content": "Hey there",
+        '  "created_at": "2013-08-30T08:36:13.273Z",
+        '  "updated_at": "2013-08-30T08:36:13.273Z",
+        '  "revision": 999
+        ' }
+
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":GetNoteAsync"
+        Dim strDefault As String = "Method failed."
+        Try
+            If String.IsNullOrEmpty(NoteId) Then
+                strTrace = "Invalid note identifier"
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Make the request."
+            Dim strResponse As String = Await _rh.APIRequestAsync("GET", "notes/" & NoteId)
+            If String.IsNullOrEmpty(strResponse) Then
+                strTrace = "Failed to retrieve the specified note, id: " & NoteId & _
+                                " - HTTP status code: " & _rh.StatusCode & ", service msg: " & _
+                                _rh.ErrorMessage
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Process the response."
+            Dim myNote As New Note
+            myNote = Newtonsoft.Json.JsonConvert.DeserializeObject(strResponse, myNote.GetType)
+
+            strTrace = "Inform listeners."
+            RaiseEvent ItemUpdated(Me, New ItemEventArgs(myNote, ItemEventArgs.enuAction.None))
+
+            ' Log Action
+            strTrace = "Retrieved note: " & myNote.ID & "."
+            LogAction("GNTE", strTrace, strRoutine)
+
+        Catch ex As Exception
+            LogAction("GNTE_FAIL", strTrace & " " & ex.Message, strRoutine)
+            LogErr(strTrace, ex, strRoutine)
+        End Try
+
+    End Sub
+
+    ''' <summary>
+    ''' Adds a new note to the specified task
+    ''' </summary>
+    ''' <param name="TaskId">String: task identifier</param>
+    ''' <param name="newNote">Wunderlist.Note:</param>
+    ''' <remarks>Raises ItemAdded when complete.</remarks>
+    Public Async Sub NewTaskNoteAsync(ByVal TaskId As String, ByVal newNote As Note)
+
+        ' POST a.wunderlist.com/api/v1/notes, Response = 201
+        ' Request Body
+        '   {
+        '       "task_id": 1234,
+        '       "content": "Hey there"
+        '   }
+        '
+        ' Response Body
+        ' {
+        '  "id": 1,
+        '  "task_id": 1234,
+        '  "content": "Hey there",
+        '  "created_at": "2013-08-30T08:36:13.273Z",
+        '  "updated_at": "2013-08-30T08:36:13.273Z",
+        '  "revision": 999
+        ' }
+
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":NewTaskNoteAsync"
+        Dim strDefault As String = "Method failed."
+        Try
+            If String.IsNullOrEmpty(TaskId) Then
+                strTrace = "No task identifier specified."
+                Throw New Exception(strDefault)
+            End If
+            If IsNothing(newNote) Then
+                strTrace = "A null note is not allowed."
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Prepare the request body."
+            Dim sb As New StringBuilder
+            sb.Append("{")
+            sb.Append("""task_id"":" & TaskId & ",")
+            sb.Append("""content"":""" & newNote.content & """")
+            sb.Append("}")
+            Dim strPost As String = sb.ToString
+
+            strTrace = "Make the request."
+            Dim strResponse As String = Await _rh.APIRequestAsync("POST", "notes", strPost)
+            If String.IsNullOrEmpty(strResponse) Then
+                strTrace = "Failed to create a new note" & _
+                                " - HTTP status code: " & _rh.StatusCode & ", service msg: " & _
+                                _rh.ErrorMessage
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Process the response."
+            Dim myNote As New Note
+            myNote = Newtonsoft.Json.JsonConvert.DeserializeObject(strResponse, myNote.GetType)
+
+            strTrace = "Inform listeners."
+            RaiseEvent ItemAdded(Me, New ItemEventArgs(myNote, ItemEventArgs.enuAction.Insert))
+
+            ' Log Action
+            strTrace = "Inserted new note: " & myNote.ID & "."
+            LogAction("ADDNTE", strTrace, strRoutine)
+
+        Catch ex As Exception
+            LogAction("ADDNTE_FAIL", strTrace & " " & ex.Message, strRoutine)
+            LogErr(strTrace, ex, strRoutine)
+        End Try
+
+    End Sub
+
+    ''' <summary>
+    ''' Updates an existing note using the properties specified
+    ''' in the updNote parameter asynchronously
+    ''' </summary>
+    ''' <param name="updNote">Wunderlist.Note:</param>
+    ''' <remarks>Raises ItemUpdated when completed.</remarks>
+    Public Async Sub UpdateNoteAsync(ByVal updNote As Note)
+
+        ' PATCH a.wunderlist.com/api/v1/notes/:id, Response = 200
+        ' Request Body
+        ' {
+        '  "revision": 999,
+        '  "content": "Hallo",
+        ' }
+        '
+        ' Response Body
+        ' {
+        '  "id": 1,
+        '  "task_id": 1234,
+        '  "content": "Hey there",
+        '  "created_at": "2013-08-30T08:36:13.273Z",
+        '  "updated_at": "2013-08-30T08:36:13.273Z",
+        '  "revision": 1000
+        ' }
+
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":UpdateNoteAsync"
+        Dim strDefault As String = "Method failed."
+        Try
+            If IsNothing(updNote) Then
+                strTrace = "A task is required."
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Construct the updated properties Json."
+            Dim strPost As String = updNote.ToStringJson
+
+            strTrace = "Make the request."
+            Dim strResponse As String = Await _rh.APIRequestAsync("PATCH", "notes/" & updNote.ID, strPost)
+            If String.IsNullOrEmpty(strResponse) Then
+                strTrace = "Failed to update the user's note " & _
+                                " - HTTP status code: " & _rh.StatusCode & ", service msg: " & _
+                                _rh.ErrorMessage
+
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Process the response,"
+            Dim myNote As New Note
+            myNote = Newtonsoft.Json.JsonConvert.DeserializeObject(strResponse, myNote.GetType)
+
+            strTrace = "Inform listeners."
+            RaiseEvent ItemUpdated(Me, New ItemEventArgs(myNote, ItemEventArgs.enuAction.Update))
+
+            ' Log Action
+            strTrace = "Updated note: " & myNote.ID & "."
+            LogAction("UPDNTE", strTrace, strRoutine)
+
+        Catch ex As Exception
+            LogAction("UPDNTE_FAIL", strTrace & " " & ex.Message, strRoutine)
+            LogErr(strTrace, ex, strRoutine)
+        End Try
+
+    End Sub
+
+    ''' <summary>
+    ''' Removes the specified note from the service
+    ''' </summary>
+    ''' <param name="NoteId">String: Unique id for the note</param>
+    ''' <param name="Revision">Long: Revision of the note</param>
+    ''' <remarks>Raises ItemDeleted when completed.</remarks>
+    Public Async Sub RemoveNoteAsync(ByVal NoteId As String, ByVal Revision As Long)
+
+        ' DELETE a.wunderlist.com/api/v1/notes/:id&revision=nn, Response = 204
+        '
+        Dim strTrace As String = "General Fault."
+        Dim strRoutine As String = _rootClass & ":RemoveNoteAsync"
+        Dim strDefault As String = "Method failed."
+        Try
+            If String.IsNullOrEmpty(NoteId) Then
+                strTrace = "No note was identified."
+                Throw New Exception(strDefault)
+            End If
+            If Revision <= 0 Then
+                strTrace = "Invalid revision."
+                Throw New Exception(strDefault)
+            End If
+
+            strTrace = "Construct the query string."
+            Dim query As New Dictionary(Of String, Object)
+            query.Add("revision", Revision)
+
+            ' returns an empty response and status code = 204 when successful
+            strTrace = "Make the request"
+            Dim strResponse As String = Await _rh.APIRequestAsync("DELETE", "notes/" & NoteId, query)
+            If _rh.StatusCode <> 204 Then
+                strTrace = "Failed to delete the specified note '" & NoteId & _
+                                " - HTTP status code: " & _rh.StatusCode & ", service msg: " & _
+                                _rh.ErrorMessage
+
+                Throw New Exception(strDefault)
+            Else
+                strTrace = "Successfully removed note, id:" & NoteId & "."
+            End If
+
+            ' Inform listeners
+            Dim myDesc As New ObjectDescriptor(enuObjectClass.Note, NoteId)
+            RaiseEvent ItemDeleted(Me, New ItemEventArgs(myDesc, ItemEventArgs.enuAction.Delete))
+
+            ' Log Action
+            LogAction("DELNTE", strTrace, strRoutine)
+
+        Catch ex As Exception
+            LogAction("DELNTE_FAIL", strTrace & " " & ex.Message, strRoutine)
+            LogErr(strTrace, ex, strRoutine)
+        End Try
+
+    End Sub
+
+
 #End Region
 
 #End Region
@@ -1756,6 +2445,9 @@ Public Class Client
             strTrace = "Set up a web browser control."
             wb_OAuth = New WebBrowser
             wb_OAuth.Name = "wbService"
+
+            strTrace = "Sets the IE browser (.net WebBrowser) to not persist any cookies."
+            If _clearCacheMethod = enuCacheMethod.Proactive Then WebHelper.SupressCookiePersist()
 
             strTrace = "Add web browser to the form."
             frmAuthorizationForm.Controls.Add(wb_OAuth)
@@ -2147,7 +2839,7 @@ Public Class Client
 
             Return strTemp
         Catch ex As Exception
-           Debug.Print(strRoutine & "|ERROR|" & strtrace & " " & ex.Message & " (" & ex.HResult & ").")
+            Debug.Print(strRoutine & "|ERROR|" & strTrace & " " & ex.Message & " (" & ex.HResult & ").")
             Return "C:\Temp"
         End Try
 
@@ -2872,7 +3564,7 @@ Public Class Client
                 Client.LogAction("REMCKI", strTrace, strRoutine)
 
             Catch ex As Exception
-             Client.LogError("", ex, _rootClass & "ClearClookies")
+                Client.LogError("", ex, _rootClass & "ClearClookies")
             End Try
 
         End Sub
@@ -3042,6 +3734,14 @@ Public Class Client
                 _statusCode = webex.Status
 
                 Dim rsp As System.Net.WebResponse = webex.Response
+                Dim strErrMsg As String = String.Empty
+                If Not IsNothing(rsp) Then
+                    responseReader = New StreamReader(rsp.GetResponseStream())
+                    strErrMsg = responseReader.ReadToEnd()
+                    responseReader.Close()
+
+                    strTrace = strTrace & " " & strErrMsg
+                End If
                 '   TraceLogger(rsp, strRoutine)
                 ' If Not IsNothing(rsp) Then _statusCode = 0
                 Client.LogError(strTrace, webex, strRoutine)
@@ -3417,6 +4117,7 @@ Public Enum enuObjectClass
     List = 1
     Task = 2
     User = 3
+    Note = 4
 End Enum
 
 Public Class ObjectBase
@@ -3533,6 +4234,15 @@ Public Class ObjectDescriptor
 
 End Class
 
+Public Class Note
+    Inherits ObjectBase
+
+    Public Property list_id As Long = 0
+    Public Property task_id As Long = 0
+    Public Property content As String = String.Empty
+
+End Class
+
 Public Class List
     Inherits ObjectBase
 
@@ -3562,7 +4272,7 @@ Public Class Task
     Public Property assignee_id As Integer = 0
     Public Property created_by_id As Integer = 0
     Public Property due_date As Date = ObjectBase.DefaultDate
-    Public Property list_id As Integer = 0
+    Public Property list_id As Long = 0
     Public Property starred As Boolean = False
     Public Property completed As Boolean = False
     Public Property completed_at As Date = ObjectBase.DefaultDate
@@ -3570,6 +4280,14 @@ Public Class Task
 
     Public Property recurrence_type As String = String.Empty
     Public Property recurrence_count As Integer = 0
+
+    ''' <summary>
+    ''' Not part of API - put here to support note management
+    ''' </summary>
+    ''' <value></value>
+    ''' <returns></returns>
+    ''' <remarks>Call GetTask and then GetTaskNotes for that task.</remarks>
+    Public Property note As String = String.Empty
 
 End Class
 
