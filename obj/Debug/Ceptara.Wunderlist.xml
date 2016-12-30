@@ -642,13 +642,6 @@ Ceptara.Wunderlist
 	<value></value>
 	<returns></returns>
 	<remarks></remarks>
-</member><member name="P:Ceptara.Wunderlist.Task.note">
-	<summary>
- Not part of API - put here to support note management
- </summary>
-	<value></value>
-	<returns></returns>
-	<remarks>Call GetTask and then GetTaskNotes for that task.</remarks>
 </member><member name="M:Ceptara.Wunderlist.ItemDescriptor.ToStringJson">
 	<summary>
  Creates a Json formatted string of the object instance.

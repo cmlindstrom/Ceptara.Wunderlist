@@ -6,6 +6,7 @@ Imports System.Runtime.Serialization
 Imports System.Windows.Forms
 
 Imports Newtonsoft.Json
+Imports System.ComponentModel
 
 Public Class Client
 
@@ -4141,16 +4142,19 @@ Public Class ObjectBase
     ''' <value></value>
     ''' <returns></returns>
     ''' <remarks>Ceptara.Data.ObjectBase exists in the Ceptara.Core library</remarks>
-    <JsonProperty(propertyname:="id")> _
+    <DefaultValue(""), JsonProperty(propertyname:="id", DefaultValueHandling:=DefaultValueHandling.Ignore)> _
     Public Shadows Property ID As String = String.Empty
 
-    <JsonProperty(PropertyName:="created_at")> _
-    Public Shadows Property CreatedDate As Date
+    <JsonProperty(PropertyName:="created_at", NullValueHandling:=NullValueHandling.Ignore)> _
+    Public Shadows Property CreatedDate As Date = Nothing
 
-    <JsonProperty(PropertyName:="updated_at")> _
-    Public Shadows Property ModifiedDate As Date
+    <JsonProperty(PropertyName:="updated_at", NullValueHandling:=NullValueHandling.Ignore)> _
+    Public Shadows Property ModifiedDate As Date = Nothing
 
+    <DefaultValue(0), JsonProperty(DefaultValueHandling:=DefaultValueHandling.Ignore)> _
     Public Property revision As Integer = 0
+
+    <DefaultValue(""), JsonProperty(DefaultValueHandling:=DefaultValueHandling.Ignore)> _
     Public Property type As String = String.Empty
 
     '   Public Property created_at As Date = DefaultDate
@@ -4197,7 +4201,10 @@ Public Class ObjectBase
                 Throw New Exception(strDefault)
             End If
 
-            Dim strReturn As String = Newtonsoft.Json.JsonConvert.SerializeObject(obj)
+            Dim settings As New JsonSerializerSettings()
+            settings.NullValueHandling = NullValueHandling.Ignore
+
+            Dim strReturn As String = Newtonsoft.Json.JsonConvert.SerializeObject(obj, Formatting.None, settings)
 
             Return strReturn
         Catch ex As Exception
@@ -4237,8 +4244,13 @@ End Class
 Public Class Note
     Inherits ObjectBase
 
+    <DefaultValue(0), JsonProperty(DefaultValueHandling:=DefaultValueHandling.Ignore)> _
     Public Property list_id As Long = 0
+
+    <DefaultValue(0), JsonProperty(DefaultValueHandling:=DefaultValueHandling.Ignore)> _
     Public Property task_id As Long = 0
+
+    <DefaultValue(""), JsonProperty(DefaultValueHandling:=DefaultValueHandling.Ignore)> _
     Public Property content As String = String.Empty
 
 End Class
@@ -4247,6 +4259,8 @@ Public Class List
     Inherits ObjectBase
 
     Public Property title As String = String.Empty
+
+    <DefaultValue(""), JsonProperty(DefaultValueHandling:=DefaultValueHandling.Ignore)> _
     Public Property list_type As String = String.Empty
 
     ''' <summary>
@@ -4260,7 +4274,10 @@ Public Class List
     <JsonProperty(PropertyName:="public")> _
     Public Property sensitivity As Boolean = True
 
+    <DefaultValue(""), JsonProperty(DefaultValueHandling:=DefaultValueHandling.Ignore)> _
     Public Property owner_type As String = String.Empty
+
+    <DefaultValue(""), JsonProperty(DefaultValueHandling:=DefaultValueHandling.Ignore)> _
     Public Property owner_id As String = String.Empty
 
 End Class
@@ -4269,24 +4286,33 @@ Public Class Task
     Inherits ObjectBase
 
     Public Property title As String = String.Empty
+
+    <DefaultValue(0), JsonProperty(DefaultValueHandling:=DefaultValueHandling.Ignore)> _
     Public Property assignee_id As Integer = 0
+
+    <DefaultValue(0), JsonProperty(DefaultValueHandling:=DefaultValueHandling.Ignore)> _
     Public Property created_by_id As Integer = 0
-    Public Property due_date As Date = ObjectBase.DefaultDate
+
+    <JsonProperty(DefaultValueHandling:=DefaultValueHandling.Ignore, NullValueHandling:=NullValueHandling.Ignore)> _
+    Public Property due_date As Date = Nothing ' ObjectBase.DefaultDate
+
     Public Property list_id As Long = 0
     Public Property starred As Boolean = False
     Public Property completed As Boolean = False
-    Public Property completed_at As Date = ObjectBase.DefaultDate
+
+    <JsonProperty(DefaultValueHandling:=DefaultValueHandling.Ignore, NullValueHandling:=NullValueHandling.Ignore)> _
+    Public Property completed_at As Date = Nothing ' ObjectBase.DefaultDate
+
+    <DefaultValue(0), JsonProperty(DefaultValueHandling:=DefaultValueHandling.Ignore)> _
     Public Property completed_by_id As Integer = 0
 
+    <DefaultValue(""), JsonProperty(DefaultValueHandling:=DefaultValueHandling.Ignore)> _
     Public Property recurrence_type As String = String.Empty
+
+    <DefaultValue(0), JsonProperty(DefaultValueHandling:=DefaultValueHandling.Ignore)> _
     Public Property recurrence_count As Integer = 0
 
-    ''' <summary>
-    ''' Not part of API - put here to support note management
-    ''' </summary>
-    ''' <value></value>
-    ''' <returns></returns>
-    ''' <remarks>Call GetTask and then GetTaskNotes for that task.</remarks>
+    <DefaultValue(""), JsonProperty(DefaultValueHandling:=DefaultValueHandling.Ignore)> _
     Public Property note As String = String.Empty
 
 End Class
@@ -4302,6 +4328,7 @@ Public Class User
     '  "revision": 1
     ' }
 
+    <DefaultValue(""), JsonProperty(DefaultValueHandling:=DefaultValueHandling.Ignore)> _
     Public Property email As String = String.Empty
 
 End Class
