@@ -5,7 +5,7 @@ The repository contains methods to interact with the Wunderlist v1 RESTful API -
 
 2) AppConfig: class used to store your app keys, i.e. ClientId, ClientSecret and callBack URL.
 
-The library supports interactions with the List and Task services.
+The library supports interactions with the List, Task, Note and User services.
 
 Example
 
