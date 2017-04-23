@@ -2913,6 +2913,8 @@ Public Class Client
         Public Property SvcItemsProcessed As Object = Nothing
 
         Public Sub New(LocalSyncRequests As Object, SvcItemsToProcess As Object, SvcItemsProcessed As Object)
+            MyBase.New
+
             _LocalSyncRequests = LocalSyncRequests
             _SvcItemsToProcess = SvcItemsToProcess
             _SvcItemsProcessed = SvcItemsProcessed
@@ -2926,12 +2928,15 @@ Public Class Client
         Public Property collection As Object = Nothing
 
         Public Sub New(ByVal newColl As Object)
+            MyBase.New
+
             _collection = newColl
         End Sub
 
     End Class
 
     Public Class ItemEventArgs
+        Inherits EventArgs
 
         Public Enum enuAction
             None = 0
